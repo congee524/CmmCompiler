@@ -1,5 +1,6 @@
 %{
 #include "token.h"
+#include "stdlib.h"
 
 // TODO() return value before with yyac
 #define TOKEN(t) (t)
@@ -13,51 +14,54 @@ yylineno = 1;
     yylloc.last_column = yycolumn + yyleng - 1; \
     yycolumn += yyleng;
 
+#define TO_NUM(x) (yylval = strtol(yytext, NULL, x))
+
 void token_error(char* err_text, int line);
 %}
 
 %option yylineno
 
-_INT10              (([-+]?[1-9][0-9]*) | ([-+]?0))
 _INT8               ([-+]?0[0-7]+)
+_INT10              (([-+]?[1-9][0-9]*) | ([-+]?0))
 _INT16              ([-+]?0[x|X][0-9a-fA-F]+)
-_INT                ({_INT8}|{_INT10}|{_INT16})
 _FLOAT              ([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)
 _ID                 ([_a-zA-Z][_a-zA-Z0-9]*)
 _RELOP              (>=|<=|==|!=|>|<)
 _DELIM              ([ \t\r])
 
 %%
-[\n]                {lines++; yycolumn = 1;}
-{_DELIM}            {/*ignore the extra delimiters*/}
-{_INT}              {return TOKEN(INT)}
-{_FLOAT}            {return TOKEN(FLOAT)}
-";"                 {return TOKEN(SEMI);}
-","                 {return TOKEN(COMMA);}
-{_RELOP}            {return TOKEN(RELOP);}
-"="                 {return TOKEN(ASSIGNOP);}
-"+"                 {return TOKEN(PLUS);}
-"-"                 {return TOKEN(MINUS);}
-"*"                 {return TOKEN(STAR);}
-"/"                 {return TOKEN(DIV);}
-"&&"                {return TOKEN(AND);}
-"||"                {return TOKEN(OR);}
-"\."                {return TOKEN(DOT);}
-"!"                 {return TOKEN(NOT);}
-"("                 {return TOKEN(LP);}
-")"                 {return TOKEN(RP);}
-"["                 {return TOKEN(LB);}
-"]"                 {return TOKEN(RB);}
-"{"                 {return TOKEN(LC);}
-"}"                 {return TOKEN(RC);}
-"int"|"float"       {return TOKEN(TYPE);}
-"struct"            {return TOKEN(STRUCT);}
-"return"            {return TOKEN(RETURN);}
-"if"                {return TOKEN(IF);}
-"else"              {return TOKEN(ELSE);}
-"while"             {return TOKEN(WHILE);}
-{_ID}               {return TOKEN(ID);}
-.                   {token_error(yytext, lines);}
+[\n]                { yycolumn = 1;}
+{_DELIM}            { /* ignore the extra delimiters */}
+{_INT8}             { TO_NUM(8); return TOKEN(INT); }
+{_INT10}            { TO_NUM(10); return TOKEN(INT); }
+{_INT16}            { TO_NUM(16); return TOKEN(INT); }
+{_FLOAT}            { return TOKEN(FLOAT) }
+";"                 { return TOKEN(SEMI); }
+","                 { return TOKEN(COMMA); }
+{_RELOP}            { return TOKEN(RELOP); }
+"="                 { return TOKEN(ASSIGNOP); }
+"+"                 { return TOKEN(PLUS); }
+"-"                 { return TOKEN(MINUS); }
+"*"                 { return TOKEN(STAR); }
+"/"                 { return TOKEN(DIV); }
+"&&"                { return TOKEN(AND); }
+"||"                { return TOKEN(OR); }
+"\."                { return TOKEN(DOT); }
+"!"                 { return TOKEN(NOT); }
+"("                 { return TOKEN(LP); }
+")"                 { return TOKEN(RP); }
+"["                 { return TOKEN(LB); }
+"]"                 { return TOKEN(RB); }
+"{"                 { return TOKEN(LC); }
+"}"                 { return TOKEN(RC); }
+"int"|"float"       { return TOKEN(TYPE); }
+"struct"            { return TOKEN(STRUCT); }
+"return"            { return TOKEN(RETURN); }
+"if"                { return TOKEN(IF); }
+"else"              { return TOKEN(ELSE); }
+"while"             { return TOKEN(WHILE); }
+{_ID}               { return TOKEN(ID); }
+.                   { token_error(yytext, lines); }
 
 %%
 

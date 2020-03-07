@@ -1,3 +1,8 @@
+%{
+
+#include <SyntaxTree.h>
+
+%}
 %union {
     int type_int;
     float type_float;
@@ -6,6 +11,15 @@
 
 %token <type_int> INT
 %token <type_int> FLOAT
+
+%right ASSIGNOP
+%left OR
+%left AND
+%left RELOP
+%left PLUS MINUS
+%left STAR DIV
+%right NOT
+%left LP RP LB RB DOT
 
 %%
 
@@ -133,7 +147,5 @@ Args:
        Exp COMMA Args
 |      Exp
 ;
-
-
 
 %%
