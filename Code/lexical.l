@@ -1,13 +1,22 @@
 %{
 #include "token.h"
-// #define TOKEN(t) (yylval.token = t)
+
 // TODO() return value before with yyac
 #define TOKEN(t) (t)
+// #define TOKEN(t) (yylval.token = t)
 
-/* recording the current line number to report errors*/
-int lines = 1;
+int yycolumn = 1;
+yylineno = 1;
+#define YY_USER_ACTION \
+    yylloc.first_line = yylloc.last_line = yylineno; \
+    yylloc.first_column = yycolumn; \
+    yylloc.last_column = yycolumn + yyleng - 1; \
+    yycolumn += yyleng;
+
 void token_error(char* err_text, int line);
 %}
+
+%option yylineno
 
 _INT10              (([-+]?[1-9][0-9]*) | ([-+]?0))
 _INT8               ([-+]?0[0-7]+)
@@ -19,7 +28,7 @@ _RELOP              (>=|<=|==|!=|>|<)
 _DELIM              ([ \t\r])
 
 %%
-[\n]                {lines++;}
+[\n]                {lines++; yycolumn = 1;}
 {_DELIM}            {/*ignore the extra delimiters*/}
 {_INT}              {return TOKEN(INT)}
 {_FLOAT}            {return TOKEN(FLOAT)}
@@ -54,5 +63,5 @@ _DELIM              ([ \t\r])
 
 void token_error(char* err_text, int line)
 {
-    printf("\033[31mError \033[0mtype \033[34mA \033[0mat line \033[34m%d\033[0m: Mysterious character \'\033[35m%s\033[0m\'\n", line, err_text);
+    printf("\033[31mError \033[0mtype \033[34mA \033[0mat line \033[34m%d\033[0m: Mysterious character \'\033[35m%s\033[0m\'\n", yylineno, err_text);
 }
