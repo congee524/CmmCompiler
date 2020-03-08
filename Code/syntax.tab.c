@@ -67,8 +67,10 @@
 #include "lex.yy.c"
 #include "SyntaxTree.h"
 
+int yylex();
+void yyerror(const char *s);
 
-#line 72 "syntax.tab.c" /* yacc.c:339  */
+#line 74 "syntax.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -138,14 +140,14 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 10 "syntax.y" /* yacc.c:355  */
+#line 12 "syntax.y" /* yacc.c:355  */
 
     int type_int;
     float type_float;
     double type_double;
     char* ident;
 
-#line 149 "syntax.tab.c" /* yacc.c:355  */
+#line 151 "syntax.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -176,7 +178,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 180 "syntax.tab.c" /* yacc.c:358  */
+#line 182 "syntax.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -478,13 +480,13 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    36,    36,    41,    45,    46,    50,    51,    52,    56,
-      57,    62,    63,    67,    68,    72,    73,    77,    82,    83,
-      87,    88,    92,    93,    97,   101,   105,   106,   110,   111,
-     112,   113,   114,   115,   120,   121,   125,   129,   130,   134,
-     135,   140,   141,   142,   143,   144,   145,   146,   147,   148,
-     149,   150,   151,   152,   153,   154,   155,   156,   157,   161,
-     162
+       0,    38,    38,    43,    47,    48,    52,    53,    54,    58,
+      59,    64,    65,    69,    70,    74,    75,    79,    84,    85,
+      89,    90,    94,    95,    99,   103,   107,   108,   112,   113,
+     114,   115,   116,   117,   122,   123,   127,   131,   132,   136,
+     137,   142,   143,   144,   145,   146,   147,   148,   149,   150,
+     151,   152,   153,   154,   155,   156,   157,   158,   159,   163,
+     164
 };
 #endif
 
@@ -1443,7 +1445,7 @@ yyreduce:
   switch (yyn)
     {
       
-#line 1447 "syntax.tab.c" /* yacc.c:1646  */
+#line 1449 "syntax.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1678,4 +1680,4 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 165 "syntax.y" /* yacc.c:1906  */
+#line 167 "syntax.y" /* yacc.c:1906  */

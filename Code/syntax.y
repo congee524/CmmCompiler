@@ -2,6 +2,8 @@
 #include "lex.yy.c"
 #include "SyntaxTree.h"
 
+int yylex();
+void yyerror(const char *s);
 %}
 
 %locations

@@ -1,17 +1,23 @@
 #include <stdio.h>
+extern int yyparse();
+extern void yyrestart(FILE* s);
 
 int main(int argc, char** argv)
 {
     if (argc <= 1) {
         return 1;
     }
-    FILE* f = fopen(argv[1], "r");
-    if (!f) {
-        perror(argv[1]);
-        return 1;
+    for (int i = 1; i < argc; i++) {
+        printf("FILE: %s\n", argv[i]);
+        FILE* f = fopen(argv[i], "r");
+        if (!f) {
+            perror(argv[1]);
+            return 1;
+        }
+        yyrestart(f);
+        yyparse();
+        printf("\n\n");
     }
-    yyrestart(f);
-    yyparse();
     return 0;
 }
 
