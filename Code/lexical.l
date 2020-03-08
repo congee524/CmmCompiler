@@ -1,5 +1,5 @@
 %{
-#include <y.tab.h>
+#include "syntax.tab.h"
 #include <stdlib.h>
 #include <string.h>
 // #include "token.h"
@@ -9,7 +9,6 @@
 #define TOKEN(t) (t)
 
 int yycolumn = 1;
-yylineno = 1;
 
 #define YY_USER_ACTION \
     yylloc.first_line = yylloc.last_line = yylineno; \
@@ -17,15 +16,18 @@ yylineno = 1;
     yylloc.last_column = yycolumn + yyleng - 1; \
     yycolumn += yyleng;
 
-#define TO_NUM(x) (yylval = strtol(yytext, NULL, x))
+#define TO_NUM(x) \
+    do { \
+    yylval.type_int = (int)strtol(yytext, NULL, x); \
+    } while(0)
 
-void token_error(char* err_text, int line);
+void token_error(char* err_text);
 %}
 
 %option yylineno
 
 _INT8               ([-+]?0[0-7]+)
-_INT10              (([-+]?[1-9][0-9]*) | ([-+]?0))
+_INT10              (([-+]?[1-9][0-9]*)|([-+]?0))
 _INT16              ([-+]?0[x|X][0-9a-fA-F]+)
 _FLOAT              ([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)
 _ID                 ([_a-zA-Z][_a-zA-Z0-9]*)
@@ -38,7 +40,7 @@ _DELIM              ([ \t\r])
 {_INT8}             { TO_NUM(8); return TOKEN(INT); }
 {_INT10}            { TO_NUM(10); return TOKEN(INT); }
 {_INT16}            { TO_NUM(16); return TOKEN(INT); }
-{_FLOAT}            { yylval = atof(yttext); return TOKEN(FLOAT) }
+{_FLOAT}            { yylval.type_float = atof(yytext); return TOKEN(FLOAT); }
 ";"                 { return TOKEN(SEMI); }
 ","                 { return TOKEN(COMMA); }
 {_RELOP}            { return TOKEN(RELOP); }
@@ -63,12 +65,12 @@ _DELIM              ([ \t\r])
 "if"                { return TOKEN(IF); }
 "else"              { return TOKEN(ELSE); }
 "while"             { return TOKEN(WHILE); }
-{_ID}               { yylval = strdup(yytext); return TOKEN(ID); }
-.                   { token_error(yytext, lines); }
+{_ID}               { yylval.ident = strdup(yytext); return TOKEN(ID); }
+.                   { token_error(yytext); }
 
 %%
 
-void token_error(char* err_text, int line)
+void token_error(char* err_text)
 {
     printf("\033[31mError \033[0mtype \033[34mA \033[0mat line \033[34m%d\033[0m: Mysterious character \'\033[35m%s\033[0m\'\n", yylineno, err_text);
 }

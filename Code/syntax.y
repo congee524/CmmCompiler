@@ -1,8 +1,11 @@
 %{
-
-#include <SyntaxTree.h>
+#include "lex.yy.c"
+#include "SyntaxTree.h"
 
 %}
+
+%locations
+
 /* declared types */
 %union {
     int type_int;
@@ -15,7 +18,7 @@
 %token <type_int> FLOAT
 %token <ident> ID
 %token STRUCT TYPE IF ELSE WHILE RETURN
-%token SEMI COMMA
+%token SEMI COMMA LC RC
 %type <type_double> Exp
 
 %right ASSIGNOP
@@ -28,6 +31,10 @@
 %left LP RP LB RB DOT
 
 %%
+
+Start:
+       Program
+;
 
 // High-level Definitions
 Program:
@@ -61,7 +68,7 @@ StructSpecifier:
 |      STRUCT Tag
 ;
 
-ptTag:
+OptTag:
        ID
 |      /* empty */
 ;
