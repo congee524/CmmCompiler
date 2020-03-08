@@ -1,13 +1,16 @@
 %{
-#include "token.h"
-#include "stdlib.h"
+#include <y.tab.h>
+#include <stdlib.h>
+#include <string.h>
+// #include "token.h"
 
-// TODO() return value before with yyac
-#define TOKEN(t) (t)
+// TODO() return token id with yyval
 // #define TOKEN(t) (yylval.token = t)
+#define TOKEN(t) (t)
 
 int yycolumn = 1;
 yylineno = 1;
+
 #define YY_USER_ACTION \
     yylloc.first_line = yylloc.last_line = yylineno; \
     yylloc.first_column = yycolumn; \
@@ -35,7 +38,7 @@ _DELIM              ([ \t\r])
 {_INT8}             { TO_NUM(8); return TOKEN(INT); }
 {_INT10}            { TO_NUM(10); return TOKEN(INT); }
 {_INT16}            { TO_NUM(16); return TOKEN(INT); }
-{_FLOAT}            { return TOKEN(FLOAT) }
+{_FLOAT}            { yylval = atof(yttext); return TOKEN(FLOAT) }
 ";"                 { return TOKEN(SEMI); }
 ","                 { return TOKEN(COMMA); }
 {_RELOP}            { return TOKEN(RELOP); }
@@ -60,7 +63,7 @@ _DELIM              ([ \t\r])
 "if"                { return TOKEN(IF); }
 "else"              { return TOKEN(ELSE); }
 "while"             { return TOKEN(WHILE); }
-{_ID}               { return TOKEN(ID); }
+{_ID}               { yylval = strdup(yytext); return TOKEN(ID); }
 .                   { token_error(yytext, lines); }
 
 %%

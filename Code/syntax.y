@@ -3,14 +3,20 @@
 #include <SyntaxTree.h>
 
 %}
+/* declared types */
 %union {
     int type_int;
     float type_float;
     double type_double;
+    char* ident;
 }
 
 %token <type_int> INT
 %token <type_int> FLOAT
+%token <ident> ID
+%token STRUCT TYPE IF ELSE WHILE RETURN
+%token SEMI COMMA
+%type <type_double> Exp
 
 %right ASSIGNOP
 %left OR
@@ -25,7 +31,8 @@
 
 // High-level Definitions
 Program:
-       ExtDefList;
+       ExtDefList
+;
 
 ExtDefList:
        ExtDef ExtDefList
