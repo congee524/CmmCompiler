@@ -10,9 +10,9 @@ void yyerror(const char *s);
 
 /* declared types */
 %union {
-    int type_int;
-    float type_float;
-    double type_double;
+    int ival;
+    float fval;
+    double dval;
     char* ident;
 }
 

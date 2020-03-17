@@ -142,9 +142,9 @@ union YYSTYPE
 {
 #line 12 "syntax.y" /* yacc.c:355  */
 
-    int type_int;
-    float type_float;
-    double type_double;
+    int ival;
+    float fval;
+    double dval;
     char* ident;
 
 #line 151 "syntax.tab.c" /* yacc.c:355  */
