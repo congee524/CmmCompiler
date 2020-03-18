@@ -1,6 +1,11 @@
+#include "ptypes.h"
 #include <stdio.h>
+extern int yylineno, yycolumn;
+extern struct YYSTYPE* prog_root;
+extern int yylex_destroy(void);
 extern int yyparse();
 extern void yyrestart(FILE* s);
+// extern void printParserTree(YYSTYPE* node, int level);
 
 int main(int argc, char** argv)
 {
@@ -15,7 +20,10 @@ int main(int argc, char** argv)
             return 1;
         }
         yyrestart(f);
+        yylineno = 1, yycolumn = 1;
         yyparse();
+        printParserTree(prog_root, 0);
+        yylex_destroy();
         printf("\n\n");
     }
     return 0;

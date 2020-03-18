@@ -45,52 +45,40 @@ extern int yydebug;
 # define YYTOKENTYPE
   enum yytokentype
   {
-    INT = 258,
-    FLOAT = 259,
-    ID = 260,
-    STRUCT = 261,
-    TYPE = 262,
-    IF = 263,
-    ELSE = 264,
-    WHILE = 265,
-    RETURN = 266,
-    SEMI = 267,
-    COMMA = 268,
-    LC = 269,
-    RC = 270,
-    ASSIGNOP = 271,
-    OR = 272,
-    AND = 273,
-    RELOP = 274,
-    PLUS = 275,
-    MINUS = 276,
-    STAR = 277,
-    DIV = 278,
-    NOT = 279,
-    LP = 280,
-    RP = 281,
-    LB = 282,
-    RB = 283,
-    DOT = 284
+    LOWER_THAN_ELSE = 258,
+    ELSE = 259,
+    STRUCT = 260,
+    TYPE = 261,
+    IF = 262,
+    WHILE = 263,
+    RETURN = 264,
+    SEMI = 265,
+    COMMA = 266,
+    LC = 267,
+    RC = 268,
+    ASSIGNOP = 269,
+    OR = 270,
+    AND = 271,
+    RELOP = 272,
+    PLUS = 273,
+    MINUS = 274,
+    STAR = 275,
+    DIV = 276,
+    NOT = 277,
+    LP = 278,
+    RP = 279,
+    LB = 280,
+    RB = 281,
+    DOT = 282,
+    INT = 283,
+    FLOAT = 284,
+    ID = 285
   };
 #endif
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-
-union YYSTYPE
-{
-#line 12 "syntax.y" /* yacc.c:1909  */
-
-    int ival;
-    float fval;
-    double dval;
-    char* ident;
-
-#line 91 "syntax.tab.h" /* yacc.c:1909  */
-};
-
-typedef union YYSTYPE YYSTYPE;
+typedef struct YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif

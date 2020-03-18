@@ -370,8 +370,8 @@ static void yynoreturn yy_fatal_error ( const char* msg  );
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
-#define YY_NUM_RULES 41
-#define YY_END_OF_BUFFER 42
+#define YY_NUM_RULES 42
+#define YY_END_OF_BUFFER 43
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -381,15 +381,15 @@ struct yy_trans_info
 	};
 static const flex_int16_t yy_accept[88] =
     {   0,
-        0,    0,    0,    0,   42,   40,    2,    1,   24,   40,
-       25,   26,   19,   17,   15,   18,   23,   20,   31,   31,
-       14,    7,   16,    7,   38,   27,   28,   38,   38,   38,
-       38,   38,   38,   29,   40,   30,    6,   41,    6,    7,
-       21,    4,    3,    0,   32,   33,   39,   35,   35,   31,
-       38,   38,   38,   11,   38,   38,   38,   38,   22,    5,
-        3,   36,   34,   35,   34,   35,   38,   38,    8,   38,
-       38,   38,   37,   12,   38,   38,   38,   38,   37,   36,
-       38,   38,   13,   36,   10,    9,    0
+        0,    0,    0,    0,   43,   41,    2,    1,   25,   41,
+       26,   27,   20,   18,   16,   19,   24,   21,   32,   32,
+       15,    8,   17,    8,   39,   28,   29,   39,   39,   39,
+       39,   39,   39,   30,   41,   31,    7,    6,    7,    8,
+       22,    4,    3,    0,   33,   34,   40,   36,   36,   32,
+       39,   39,   39,   12,   39,   39,   39,   39,   23,    5,
+        3,   37,   35,   36,   35,   36,   39,   39,    9,   39,
+       39,   39,   38,   13,   39,   39,   39,   39,   38,   37,
+       39,   39,   14,   37,   11,   10,    0
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -524,11 +524,11 @@ static const flex_int16_t yy_chk[240] =
     } ;
 
 /* Table of booleans, true if rule could match eol. */
-static const flex_int32_t yy_rule_can_match_eol[42] =
+static const flex_int32_t yy_rule_can_match_eol[43] =
     {   0,
-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-    0, 0,     };
+    0, 0, 0,     };
 
 static yy_state_type yy_last_accepting_state;
 static char *yy_last_accepting_cpos;
@@ -549,11 +549,12 @@ char *yytext;
 #include "syntax.tab.h"
 #include <stdlib.h>
 #include <string.h>
+#include "ptypes.h"
 // #include "token.h"
 
-// TODO() return token id with yyval
-// #define TOKEN(t) (yylval.token = t)
-#define TOKEN(t) (t)
+// #define DEBUG
+
+#define TOKEN(t) (yylval.token = t)
 
 int yycolumn = 1;
 
@@ -568,12 +569,11 @@ int yycolumn = 1;
         yylval.ival = (int)strtol(yytext, &yytext, x); \
     } while(0)
 
-// #define TO_NUM(x) \
-//     do { \
-//         yylval.type_int = yytext; \
-//     } while(0)
-
-#define DISP_BUG(x) printf("%s %s\n", x, yytext)
+#ifdef DEBUG
+    #define DISP_BUG(x) printf("%s %s\n", x, yytext)
+#else
+    #define DISP_BUG(x) {}
+#endif
 
 void token_error(char* err_text);
 #line 580 "lex.yy.c"
@@ -892,293 +892,299 @@ YY_RULE_SETUP
 { BEGIN(INITIAL); }
 	YY_BREAK
 case 6:
+/* rule 6 can match eol */
 YY_RULE_SETUP
 #line 58 "lexical.l"
-{ /* skip the comment */ }
+{ /* yylineno will auto increase */ }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 60 "lexical.l"
+#line 59 "lexical.l"
+{ /* skip the comment */ }
+	YY_BREAK
+case 8:
+YY_RULE_SETUP
+#line 61 "lexical.l"
 {
     DISP_BUG("relop");
     return TOKEN(RELOP); 
 }
 	YY_BREAK
-case 8:
+case 9:
 YY_RULE_SETUP
-#line 64 "lexical.l"
+#line 65 "lexical.l"
 {
     DISP_BUG("type");
     return TOKEN(TYPE); 
 }
 	YY_BREAK
-case 9:
+case 10:
 YY_RULE_SETUP
-#line 68 "lexical.l"
+#line 69 "lexical.l"
 {
     DISP_BUG("_struct");
     return TOKEN(STRUCT);
 }
 	YY_BREAK
-case 10:
+case 11:
 YY_RULE_SETUP
-#line 72 "lexical.l"
+#line 73 "lexical.l"
 {
     DISP_BUG("return");
     return TOKEN(RETURN); 
 }
 	YY_BREAK
-case 11:
+case 12:
 YY_RULE_SETUP
-#line 76 "lexical.l"
+#line 77 "lexical.l"
 {
     DISP_BUG("if");
     return TOKEN(IF);
 }
 	YY_BREAK
-case 12:
+case 13:
 YY_RULE_SETUP
-#line 80 "lexical.l"
+#line 81 "lexical.l"
 {
     DISP_BUG("else");
     return TOKEN(ELSE);
 }
 	YY_BREAK
-case 13:
+case 14:
 YY_RULE_SETUP
-#line 84 "lexical.l"
+#line 85 "lexical.l"
 {
     DISP_BUG("while");
     return TOKEN(WHILE); 
 }
 	YY_BREAK
-case 14:
+case 15:
 YY_RULE_SETUP
-#line 88 "lexical.l"
+#line 89 "lexical.l"
 {
     DISP_BUG("semi");
     return TOKEN(SEMI);
 }
 	YY_BREAK
-case 15:
+case 16:
 YY_RULE_SETUP
-#line 92 "lexical.l"
+#line 93 "lexical.l"
 {
     DISP_BUG("comma");
     return TOKEN(COMMA);
 }
 	YY_BREAK
-case 16:
+case 17:
 YY_RULE_SETUP
-#line 96 "lexical.l"
+#line 97 "lexical.l"
 {
     DISP_BUG("assignop");
     return TOKEN(ASSIGNOP);
 }
 	YY_BREAK
-case 17:
+case 18:
 YY_RULE_SETUP
-#line 100 "lexical.l"
+#line 101 "lexical.l"
 {
     DISP_BUG("plus");
     return TOKEN(PLUS);
 }
 	YY_BREAK
-case 18:
+case 19:
 YY_RULE_SETUP
-#line 104 "lexical.l"
+#line 105 "lexical.l"
 {
     DISP_BUG("minus");
     return TOKEN(MINUS);
 }
 	YY_BREAK
-case 19:
+case 20:
 YY_RULE_SETUP
-#line 108 "lexical.l"
+#line 109 "lexical.l"
 {
     DISP_BUG("star");
     return TOKEN(STAR);
 }
 	YY_BREAK
-case 20:
+case 21:
 YY_RULE_SETUP
-#line 112 "lexical.l"
+#line 113 "lexical.l"
 {
     DISP_BUG("div");
     return TOKEN(DIV);
 }
 	YY_BREAK
-case 21:
+case 22:
 YY_RULE_SETUP
-#line 116 "lexical.l"
+#line 117 "lexical.l"
 {
     DISP_BUG("and");
     return TOKEN(AND);
 }
 	YY_BREAK
-case 22:
+case 23:
 YY_RULE_SETUP
-#line 120 "lexical.l"
+#line 121 "lexical.l"
 {
     DISP_BUG("or");
     return TOKEN(OR);
 }
 	YY_BREAK
-case 23:
+case 24:
 YY_RULE_SETUP
-#line 124 "lexical.l"
+#line 125 "lexical.l"
 {
     DISP_BUG("dot");
     return TOKEN(DOT);
 }
 	YY_BREAK
-case 24:
+case 25:
 YY_RULE_SETUP
-#line 128 "lexical.l"
+#line 129 "lexical.l"
 {
     DISP_BUG("not");
     return TOKEN(NOT);
 }
 	YY_BREAK
-case 25:
+case 26:
 YY_RULE_SETUP
-#line 132 "lexical.l"
+#line 133 "lexical.l"
 {
     DISP_BUG("lp");
     return TOKEN(LP);
 }
 	YY_BREAK
-case 26:
+case 27:
 YY_RULE_SETUP
-#line 136 "lexical.l"
+#line 137 "lexical.l"
 {
     DISP_BUG("rp");
     return TOKEN(RP);
 }
 	YY_BREAK
-case 27:
+case 28:
 YY_RULE_SETUP
-#line 140 "lexical.l"
+#line 141 "lexical.l"
 {
     DISP_BUG("lb");
     return TOKEN(LB);
 }
 	YY_BREAK
-case 28:
+case 29:
 YY_RULE_SETUP
-#line 144 "lexical.l"
+#line 145 "lexical.l"
 {
     DISP_BUG("rb");
     return TOKEN(RB);
 }
 	YY_BREAK
-case 29:
+case 30:
 YY_RULE_SETUP
-#line 148 "lexical.l"
+#line 149 "lexical.l"
 {
     DISP_BUG("lc");
     return TOKEN(LC);
 }
 	YY_BREAK
-case 30:
+case 31:
 YY_RULE_SETUP
-#line 152 "lexical.l"
+#line 153 "lexical.l"
 {
     DISP_BUG("rc");
     return TOKEN(RC);
 }
 	YY_BREAK
-case 31:
+case 32:
 YY_RULE_SETUP
-#line 157 "lexical.l"
+#line 158 "lexical.l"
 {
     DISP_BUG("int10");
     TO_NUM(10);
     return TOKEN(INT);
 }
 	YY_BREAK
-case 32:
+case 33:
 YY_RULE_SETUP
-#line 162 "lexical.l"
+#line 163 "lexical.l"
 {
     DISP_BUG("int8");
     TO_NUM(8);
     return TOKEN(INT);
 }
 	YY_BREAK
-case 33:
-YY_RULE_SETUP
-#line 167 "lexical.l"
-{
-    DISP_BUG("w_int8");
-    token_error("Wrong octal number");
-}
-	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 171 "lexical.l"
+#line 168 "lexical.l"
+{
+    DISP_BUG("w_int8");
+    token_error("Illegal octal number");
+}
+	YY_BREAK
+case 35:
+YY_RULE_SETUP
+#line 172 "lexical.l"
 {
     DISP_BUG("int16");
     TO_NUM(16);
     return TOKEN(INT);
 }
 	YY_BREAK
-case 35:
-YY_RULE_SETUP
-#line 176 "lexical.l"
-{
-    DISP_BUG("w_int16");
-    token_error("Wrong hexadecimal number");
-}
-	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 180 "lexical.l"
+#line 177 "lexical.l"
+{
+    DISP_BUG("w_int16");
+    token_error("Illegal hexadecimal number");
+}
+	YY_BREAK
+case 37:
+YY_RULE_SETUP
+#line 181 "lexical.l"
 {
     DISP_BUG("_float");
     yylval.fval = atof(yytext);
     return TOKEN(FLOAT);
 }
 	YY_BREAK
-case 37:
-YY_RULE_SETUP
-#line 185 "lexical.l"
-{
-    DISP_BUG("_w_float");
-    token_error("Wrong floating point number");
-}
-	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 189 "lexical.l"
+#line 186 "lexical.l"
 {
-    DISP_BUG("id");
-    yylval.ident = strdup(yytext);
-    return TOKEN(ID);
+    DISP_BUG("_w_float");
+    token_error("Illegal floating point number");
 }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 194 "lexical.l"
+#line 190 "lexical.l"
 {
-    DISP_BUG("w_id");
-    token_error("Wrong identifier");
+    DISP_BUG("id");
+    yylval.ident = (char *) strdup(yytext);
+    return TOKEN(ID);
 }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 199 "lexical.l"
+#line 195 "lexical.l"
+{
+    DISP_BUG("w_id");
+    token_error("Illegal identifier");
+}
+	YY_BREAK
+case 41:
+YY_RULE_SETUP
+#line 200 "lexical.l"
 {
     DISP_BUG("other");
     token_error("Mysterious character");
 }
 	YY_BREAK
-case 41:
+case 42:
 YY_RULE_SETUP
-#line 204 "lexical.l"
+#line 205 "lexical.l"
 ECHO;
 	YY_BREAK
-#line 1182 "lex.yy.c"
+#line 1188 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(MUL_COMMENT):
 	yyterminate();
@@ -2196,10 +2202,10 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 204 "lexical.l"
+#line 205 "lexical.l"
 
 
 void token_error(char* err_text)
 {
-    printf("\033[31mError \033[0mtype \033[34mA \033[0mat line \033[34m%d\033[0m: %s \'\033[35m%s\033[0m\'\n", yylineno, err_text, yytext);
+    fprintf(stderr, "\033[31mError \033[0mtype \033[34mA \033[0mat line \033[34m%d\033[0m: %s \'\033[35m%s\033[0m\'.\n", yylineno, err_text, yytext);
 }

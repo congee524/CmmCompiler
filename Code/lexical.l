@@ -2,11 +2,12 @@
 #include "syntax.tab.h"
 #include <stdlib.h>
 #include <string.h>
+#include "ptypes.h"
 // #include "token.h"
 
-// TODO() return token id with yyval
-// #define TOKEN(t) (yylval.token = t)
-#define TOKEN(t) (t)
+// #define DEBUG
+
+#define TOKEN(t) (yylval.token = t)
 
 int yycolumn = 1;
 
@@ -21,12 +22,11 @@ int yycolumn = 1;
         yylval.ival = (int)strtol(yytext, &yytext, x); \
     } while(0)
 
-// #define TO_NUM(x) \
-//     do { \
-//         yylval.type_int = yytext; \
-//     } while(0)
-
-#define DISP_BUG(x) printf("%s %s\n", x, yytext)
+#ifdef DEBUG
+    #define DISP_BUG(x) printf("%s %s\n", x, yytext)
+#else
+    #define DISP_BUG(x) {}
+#endif
 
 void token_error(char* err_text);
 %}
@@ -55,6 +55,7 @@ _SINGLE_COMMENT     ("//"[^\n]*)
 {_SINGLE_COMMENT}   { /* skip the comment */ }
 "/*"                { BEGIN(MUL_COMMENT); }
 <MUL_COMMENT>"*/"   { BEGIN(INITIAL); }
+<MUL_COMMENT>\n     { /* yylineno will auto increase */ }
 <MUL_COMMENT>.      { /* skip the comment */ }
 
 {_RELOP}            {
@@ -188,10 +189,10 @@ _SINGLE_COMMENT     ("//"[^\n]*)
 }
 {_ID}               {
     DISP_BUG("id");
-    yylval.ident = strdup(yytext);
+    yylval.ident = (char *) strdup(yytext);
     return TOKEN(ID);
 }
-{_W_ID}               {
+{_W_ID}             {
     DISP_BUG("w_id");
     token_error("Illegal identifier");
 }
@@ -205,5 +206,5 @@ _SINGLE_COMMENT     ("//"[^\n]*)
 
 void token_error(char* err_text)
 {
-    printf("\033[31mError \033[0mtype \033[34mA \033[0mat line \033[34m%d\033[0m: %s \'\033[35m%s\033[0m\'.\n", yylineno, err_text, yytext);
+    fprintf(stderr, "\033[31mError \033[0mtype \033[34mA \033[0mat line \033[34m%d\033[0m: %s \'\033[35m%s\033[0m\'.\n", yylineno, err_text, yytext);
 }
