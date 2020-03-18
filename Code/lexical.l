@@ -7,7 +7,7 @@
 
 // #define DEBUG
 
-#define TOKEN(t) (yylval.token = t)
+#define TOKEN(t) (yylval->token = t)
 
 int yycolumn = 1;
 
@@ -19,14 +19,10 @@ int yycolumn = 1;
 
 #define TO_NUM(x) \
     do { \
-        yylval.ival = (int)strtol(yytext, &yytext, x); \
+        yylval->ival = (int)strtol(yytext, &yytext, x); \
     } while(0)
 
-#ifdef DEBUG
-    #define DISP_BUG(x) printf("%s %s\n", x, yytext)
-#else
-    #define DISP_BUG(x) {}
-#endif
+void init_yylval(char* sname);
 
 void token_error(char* err_text);
 %}
@@ -59,150 +55,157 @@ _SINGLE_COMMENT     ("//"[^\n]*)
 <MUL_COMMENT>.      { /* skip the comment */ }
 
 {_RELOP}            {
-    DISP_BUG("relop");
+    init_yylval("RELOP");
     return TOKEN(RELOP); 
 }
 "int"|"float"       {
-    DISP_BUG("type");
+    init_yylval("TYPE");
+    yylval->ident = strdup(yytext);
     return TOKEN(TYPE); 
 }
 "struct"            {
-    DISP_BUG("_struct");
+    init_yylval("STRUCT");
     return TOKEN(STRUCT);
 }
 "return"            {
-    DISP_BUG("return");
+    init_yylval("RETURN");
     return TOKEN(RETURN); 
 }
 "if"                {
-    DISP_BUG("if");
+    init_yylval("IF");
     return TOKEN(IF);
 }
 "else"              {
-    DISP_BUG("else");
+    init_yylval("ELSE");
     return TOKEN(ELSE);
 }
 "while"             {
-    DISP_BUG("while");
+    init_yylval("WHILE");
     return TOKEN(WHILE); 
 }
 ";"                 {
-    DISP_BUG("semi");
+    init_yylval("SEMI");
     return TOKEN(SEMI);
 }
 ","                 {
-    DISP_BUG("comma");
+    init_yylval("COMMA");
     return TOKEN(COMMA);
 }
 "="                 {
-    DISP_BUG("assignop");
+    init_yylval("ASSIGNOP");
     return TOKEN(ASSIGNOP);
 }
 "+"                 {
-    DISP_BUG("plus");
+    init_yylval("PLUS");
     return TOKEN(PLUS);
 }
 "-"                 {
-    DISP_BUG("minus");
+    init_yylval("MINUS");
     return TOKEN(MINUS);
 }
 "*"                 {
-    DISP_BUG("star");
+    init_yylval("STAR");
     return TOKEN(STAR);
 }
 "/"                 {
-    DISP_BUG("div");
+    init_yylval("DIV");
     return TOKEN(DIV);
 }
 "&&"                {
-    DISP_BUG("and");
+    init_yylval("AND");
     return TOKEN(AND);
 }
 "||"                {
-    DISP_BUG("or");
+    init_yylval("OR");
     return TOKEN(OR);
 }
 "\."                {
-    DISP_BUG("dot");
+    init_yylval("DOT");
     return TOKEN(DOT);
 }
 "!"                 {
-    DISP_BUG("not");
+    init_yylval("NOT");
     return TOKEN(NOT);
 }
 "("                 {
-    DISP_BUG("lp");
+    init_yylval("LP");
     return TOKEN(LP);
 }
 ")"                 {
-    DISP_BUG("rp");
+    init_yylval("RP");
     return TOKEN(RP);
 }
 "["                 {
-    DISP_BUG("lb");
+    init_yylval("LB");
     return TOKEN(LB);
 }
 "]"                 {
-    DISP_BUG("rb");
+    init_yylval("RB");
     return TOKEN(RB);
 }
 "{"                 {
-    DISP_BUG("lc");
+    init_yylval("LC");
     return TOKEN(LC);
 }
 "}"                 {
-    DISP_BUG("rc");
+    init_yylval("RC");
     return TOKEN(RC);
 }
 
 {_INT10}            {
-    DISP_BUG("int10");
+    init_yylval("INT");
     TO_NUM(10);
     return TOKEN(INT);
 }
 {_INT8}             {
-    DISP_BUG("int8");
+    init_yylval("INT");
     TO_NUM(8);
     return TOKEN(INT);
 }
 {_W_INT8}           {
-    DISP_BUG("w_int8");
     token_error("Illegal octal number");
 }
 {_INT16}            {
-    DISP_BUG("int16");
+    init_yylval("INT");
     TO_NUM(16);
     return TOKEN(INT);
 }
 {_W_INT16}          {
-    DISP_BUG("w_int16");
     token_error("Illegal hexadecimal number");
 }
 {_FLOAT}            {
-    DISP_BUG("_float");
-    yylval.fval = atof(yytext);
+    init_yylval("FLOAT");
+    yylval->fval = atof(yytext);
     return TOKEN(FLOAT);
 }
 {_W_FLOAT}          {
-    DISP_BUG("_w_float");
     token_error("Illegal floating point number");
 }
 {_ID}               {
-    DISP_BUG("id");
-    yylval.ident = (char *) strdup(yytext);
+    init_yylval("ID");
+    yylval->ident = (char *) strdup(yytext);
     return TOKEN(ID);
 }
 {_W_ID}             {
-    DISP_BUG("w_id");
     token_error("Illegal identifier");
 }
 
 .                   {
-    DISP_BUG("other");
     token_error("Mysterious character");
 }
 
 %%
+
+void init_yylval(char* sname) {
+    yylval = malloc(sizeof(struct Node));
+    yylval->symbol = strdup(sname);
+    yylval->line = yylineno;
+    yylval->n_child = 0;
+    yylval->child = NULL;
+#ifdef DEBUG
+    printf("%s %s\n", sname, yytext);
+#endif
+}
 
 void token_error(char* err_text)
 {

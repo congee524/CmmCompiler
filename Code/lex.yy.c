@@ -554,7 +554,7 @@ char *yytext;
 
 // #define DEBUG
 
-#define TOKEN(t) (yylval.token = t)
+#define TOKEN(t) (yylval->token = t)
 
 int yycolumn = 1;
 
@@ -566,19 +566,15 @@ int yycolumn = 1;
 
 #define TO_NUM(x) \
     do { \
-        yylval.ival = (int)strtol(yytext, &yytext, x); \
+        yylval->ival = (int)strtol(yytext, &yytext, x); \
     } while(0)
 
-#ifdef DEBUG
-    #define DISP_BUG(x) printf("%s %s\n", x, yytext)
-#else
-    #define DISP_BUG(x) {}
-#endif
+void init_yylval(char* sname);
 
 void token_error(char* err_text);
-#line 580 "lex.yy.c"
+#line 576 "lex.yy.c"
 
-#line 582 "lex.yy.c"
+#line 578 "lex.yy.c"
 
 #define INITIAL 0
 #define MUL_COMMENT 1
@@ -796,9 +792,9 @@ YY_DECL
 		}
 
 	{
-#line 52 "lexical.l"
+#line 48 "lexical.l"
 
-#line 802 "lex.yy.c"
+#line 798 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -868,323 +864,319 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 53 "lexical.l"
+#line 49 "lexical.l"
 { yycolumn = 1;}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 54 "lexical.l"
+#line 50 "lexical.l"
 { /* ignore the extra delimiters */}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 55 "lexical.l"
+#line 51 "lexical.l"
 { /* skip the comment */ }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 56 "lexical.l"
+#line 52 "lexical.l"
 { BEGIN(MUL_COMMENT); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 57 "lexical.l"
+#line 53 "lexical.l"
 { BEGIN(INITIAL); }
 	YY_BREAK
 case 6:
 /* rule 6 can match eol */
 YY_RULE_SETUP
-#line 58 "lexical.l"
+#line 54 "lexical.l"
 { /* yylineno will auto increase */ }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 59 "lexical.l"
+#line 55 "lexical.l"
 { /* skip the comment */ }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 61 "lexical.l"
+#line 57 "lexical.l"
 {
-    DISP_BUG("relop");
+    init_yylval("RELOP");
     return TOKEN(RELOP); 
 }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 65 "lexical.l"
+#line 61 "lexical.l"
 {
-    DISP_BUG("type");
+    init_yylval("TYPE");
+    yylval->ident = strdup(yytext);
     return TOKEN(TYPE); 
 }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 69 "lexical.l"
+#line 66 "lexical.l"
 {
-    DISP_BUG("_struct");
+    init_yylval("STRUCT");
     return TOKEN(STRUCT);
 }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 73 "lexical.l"
+#line 70 "lexical.l"
 {
-    DISP_BUG("return");
+    init_yylval("RETURN");
     return TOKEN(RETURN); 
 }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 77 "lexical.l"
+#line 74 "lexical.l"
 {
-    DISP_BUG("if");
+    init_yylval("IF");
     return TOKEN(IF);
 }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 81 "lexical.l"
+#line 78 "lexical.l"
 {
-    DISP_BUG("else");
+    init_yylval("ELSE");
     return TOKEN(ELSE);
 }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 85 "lexical.l"
+#line 82 "lexical.l"
 {
-    DISP_BUG("while");
+    init_yylval("WHILE");
     return TOKEN(WHILE); 
 }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 89 "lexical.l"
+#line 86 "lexical.l"
 {
-    DISP_BUG("semi");
+    init_yylval("SEMI");
     return TOKEN(SEMI);
 }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 93 "lexical.l"
+#line 90 "lexical.l"
 {
-    DISP_BUG("comma");
+    init_yylval("COMMA");
     return TOKEN(COMMA);
 }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 97 "lexical.l"
+#line 94 "lexical.l"
 {
-    DISP_BUG("assignop");
+    init_yylval("ASSIGNOP");
     return TOKEN(ASSIGNOP);
 }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 101 "lexical.l"
+#line 98 "lexical.l"
 {
-    DISP_BUG("plus");
+    init_yylval("PLUS");
     return TOKEN(PLUS);
 }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 105 "lexical.l"
+#line 102 "lexical.l"
 {
-    DISP_BUG("minus");
+    init_yylval("MINUS");
     return TOKEN(MINUS);
 }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 109 "lexical.l"
+#line 106 "lexical.l"
 {
-    DISP_BUG("star");
+    init_yylval("STAR");
     return TOKEN(STAR);
 }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 113 "lexical.l"
+#line 110 "lexical.l"
 {
-    DISP_BUG("div");
+    init_yylval("DIV");
     return TOKEN(DIV);
 }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 117 "lexical.l"
+#line 114 "lexical.l"
 {
-    DISP_BUG("and");
+    init_yylval("AND");
     return TOKEN(AND);
 }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 121 "lexical.l"
+#line 118 "lexical.l"
 {
-    DISP_BUG("or");
+    init_yylval("OR");
     return TOKEN(OR);
 }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 125 "lexical.l"
+#line 122 "lexical.l"
 {
-    DISP_BUG("dot");
+    init_yylval("DOT");
     return TOKEN(DOT);
 }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 129 "lexical.l"
+#line 126 "lexical.l"
 {
-    DISP_BUG("not");
+    init_yylval("NOT");
     return TOKEN(NOT);
 }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 133 "lexical.l"
+#line 130 "lexical.l"
 {
-    DISP_BUG("lp");
+    init_yylval("LP");
     return TOKEN(LP);
 }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 137 "lexical.l"
+#line 134 "lexical.l"
 {
-    DISP_BUG("rp");
+    init_yylval("RP");
     return TOKEN(RP);
 }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 141 "lexical.l"
+#line 138 "lexical.l"
 {
-    DISP_BUG("lb");
+    init_yylval("LB");
     return TOKEN(LB);
 }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 145 "lexical.l"
+#line 142 "lexical.l"
 {
-    DISP_BUG("rb");
+    init_yylval("RB");
     return TOKEN(RB);
 }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 149 "lexical.l"
+#line 146 "lexical.l"
 {
-    DISP_BUG("lc");
+    init_yylval("LC");
     return TOKEN(LC);
 }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 153 "lexical.l"
+#line 150 "lexical.l"
 {
-    DISP_BUG("rc");
+    init_yylval("RC");
     return TOKEN(RC);
 }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 158 "lexical.l"
+#line 155 "lexical.l"
 {
-    DISP_BUG("int10");
+    init_yylval("INT");
     TO_NUM(10);
     return TOKEN(INT);
 }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 163 "lexical.l"
+#line 160 "lexical.l"
 {
-    DISP_BUG("int8");
+    init_yylval("INT");
     TO_NUM(8);
     return TOKEN(INT);
 }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 168 "lexical.l"
+#line 165 "lexical.l"
 {
-    DISP_BUG("w_int8");
     token_error("Illegal octal number");
 }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 172 "lexical.l"
+#line 168 "lexical.l"
 {
-    DISP_BUG("int16");
+    init_yylval("INT");
     TO_NUM(16);
     return TOKEN(INT);
 }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 177 "lexical.l"
+#line 173 "lexical.l"
 {
-    DISP_BUG("w_int16");
     token_error("Illegal hexadecimal number");
 }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 181 "lexical.l"
+#line 176 "lexical.l"
 {
-    DISP_BUG("_float");
-    yylval.fval = atof(yytext);
+    init_yylval("FLOAT");
+    yylval->fval = atof(yytext);
     return TOKEN(FLOAT);
 }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 186 "lexical.l"
+#line 181 "lexical.l"
 {
-    DISP_BUG("_w_float");
     token_error("Illegal floating point number");
 }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 190 "lexical.l"
+#line 184 "lexical.l"
 {
-    DISP_BUG("id");
-    yylval.ident = (char *) strdup(yytext);
+    init_yylval("ID");
+    yylval->ident = (char *) strdup(yytext);
     return TOKEN(ID);
 }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 195 "lexical.l"
+#line 189 "lexical.l"
 {
-    DISP_BUG("w_id");
     token_error("Illegal identifier");
 }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 200 "lexical.l"
+#line 193 "lexical.l"
 {
-    DISP_BUG("other");
     token_error("Mysterious character");
 }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 205 "lexical.l"
+#line 197 "lexical.l"
 ECHO;
 	YY_BREAK
-#line 1188 "lex.yy.c"
+#line 1180 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(MUL_COMMENT):
 	yyterminate();
@@ -2202,8 +2194,19 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 205 "lexical.l"
+#line 197 "lexical.l"
 
+
+void init_yylval(char* sname) {
+    yylval = malloc(sizeof(struct Node));
+    yylval->symbol = strdup(sname);
+    yylval->line = yylineno;
+    yylval->n_child = 0;
+    yylval->child = NULL;
+#ifdef DEBUG
+    printf("%s %s\n", sname, yytext);
+#endif
+}
 
 void token_error(char* err_text)
 {

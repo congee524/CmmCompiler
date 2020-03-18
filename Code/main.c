@@ -1,7 +1,7 @@
 #include "ptypes.h"
 #include <stdio.h>
 extern int yylineno, yycolumn;
-extern struct YYSTYPE* prog_root;
+extern struct Node* prog_root;
 extern int yylex_destroy(void);
 extern int yyparse();
 extern void yyrestart(FILE* s);
