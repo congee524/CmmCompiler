@@ -5,7 +5,7 @@ extern struct Node* prog_root;
 extern int yylex_destroy(void);
 extern int yyparse();
 extern void yyrestart(FILE* s);
-// extern void printParserTree(YYSTYPE* node, int level);
+extern void printParserTree(struct Node* node, int level);
 
 int main(int argc, char** argv)
 {
@@ -28,60 +28,3 @@ int main(int argc, char** argv)
     }
     return 0;
 }
-
-/*
-#include <stdio.h>
-
-extern FILE* yyin;
-extern char* yytext;
-#define MY_DEFINE(R) #R
-extern enum TokenType token;
-
-static char* tokens[] = { "ID",
-    "SEMI",
-    "INT",
-    "FLOAT",
-    "COMMA",
-    "RELOP",
-    "ASSIGNOP",
-    "PLUS",
-    "MINUS",
-    "STAR",
-    "DIV",
-    "AND",
-    "OR",
-    "DOT",
-    "NOT",
-    "TYPE",
-    "LP",
-    "RP",
-    "LB",
-    "RB",
-    "LC",
-    "RC",
-    "STRUCT",
-    "RETURN",
-    "IF",
-    "ELSE",
-    "WHILE" };
-
-int main(int argc, char** argv)
-{
-    int ret;
-    if (argc > 1) {
-        if (!(yyin = fopen(argv[1], "r"))) {
-            perror(argv[1]);
-            return 1;
-        }
-    }
-    while (ret = yylex()) {
-        if (ret >= 256) {
-            printf("%s ", tokens[ret - 256]);
-        } else {
-            printf("%d ", ret);
-        }
-        printf("%s\n", yytext);
-    }
-    return 0;
-}
-*/
