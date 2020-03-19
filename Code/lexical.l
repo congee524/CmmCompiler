@@ -228,5 +228,5 @@ void init_yylval(char* sname) {
 
 void token_error(char* err_text)
 {
-    fprintf(stderr, "\033[31mError \033[0mtype \033[34mA \033[0mat line \033[34m%d\033[0m: %s \'\033[35m%s\033[0m\'.\n", yylineno, err_text, yytext);
+    fprintf(stderr, "\033[31mError \033[0mtype \033[34mA \033[0mat Line \033[34m%d\033[0m: %s \'\033[35m%s\033[0m\'.\n", yylineno, err_text, yytext);
 }
