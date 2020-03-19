@@ -309,7 +309,7 @@ Args:
 %%
 
 void yyerror(const char *s) {
-    fprintf(stderr, "\033[31mError \033[0mtype \033[34mB \033[0mat line \033[34m%d\033[0m: %s.\n", yylineno, s);
+    fprintf(stderr, "\033[31mError \033[0mtype \033[34mB \033[0mat Line \033[34m%d\033[0m: %s.\n", yylineno, s);
 }
 
 struct Node* make_yylval(char *sname, int line, int num, ...) {
