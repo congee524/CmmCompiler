@@ -2,4 +2,4 @@
 
 以为 $$ $1，每次都是不同的地址，发现是一样的，得new一个
 
-由于一开始忘记写 gitignore，后来清除了parser 和 scanner，丢失了很多commit 记录
+负号 结合性

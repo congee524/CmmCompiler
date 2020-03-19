@@ -1,6 +1,10 @@
 #include "ptypes.h"
 #include <stdio.h>
-extern int yylineno, yycolumn;
+
+// #define DEBUG
+// #define MUL_FILE
+
+extern int yylineno, yycolumn, errors;
 extern struct Node* prog_root;
 extern int yylex_destroy(void);
 extern int yyparse();
@@ -13,18 +17,26 @@ int main(int argc, char** argv)
         return 1;
     }
     for (int i = 1; i < argc; i++) {
-        printf("FILE: %s\n", argv[i]);
+#ifdef MUL_FILE
+        printf("\nFILE: %s\n", argv[i]);
+#endif
         FILE* f = fopen(argv[i], "r");
         if (!f) {
             perror(argv[1]);
             return 1;
         }
         yyrestart(f);
-        yylineno = 1, yycolumn = 1;
+        yylineno = 1, yycolumn = 1, errors = 0;
+        ;
+#ifdef DEBUG
         yyparse();
         printParserTree(prog_root, 0);
+#else
+        if (!yyparse() && !errors) {
+            printParserTree(prog_root, 0);
+        }
+#endif
         yylex_destroy();
-        printf("\n\n");
     }
     return 0;
 }

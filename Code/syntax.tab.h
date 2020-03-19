@@ -64,15 +64,16 @@ extern int yydebug;
     MINUS = 274,
     STAR = 275,
     DIV = 276,
-    NOT = 277,
-    LP = 278,
-    RP = 279,
-    LB = 280,
-    RB = 281,
-    DOT = 282,
-    INT = 283,
-    FLOAT = 284,
-    ID = 285
+    NEG = 277,
+    NOT = 278,
+    LP = 279,
+    RP = 280,
+    LB = 281,
+    RB = 282,
+    DOT = 283,
+    INT = 284,
+    FLOAT = 285,
+    ID = 286
   };
 #endif
 

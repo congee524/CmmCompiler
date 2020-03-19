@@ -6,6 +6,8 @@
 
 struct Node* prog_root;
 
+int errors;
+
 int yylex();
 void yyerror(const char *s);
 struct Node* make_yylval(char* sname, int line, int num, ...);
@@ -31,7 +33,7 @@ void printParserTree(struct Node* node, int level);
 %left RELOP
 %left PLUS MINUS
 %left STAR DIV
-%right NOT
+%right NEG NOT
 %left LP RP LB RB DOT
 
 %token INT
@@ -49,13 +51,20 @@ void printParserTree(struct Node* node, int level);
 // High-level Definitions
 Program:
     ExtDefList
-        { $$ = make_yylval("Program", @$.first_line, 1, $1); prog_root = $$;}
+        { 
+            if ($1->n_child == 0) {
+                $$ = make_yylval("Program", yylineno, 1, $1);
+            } else {
+                $$ = make_yylval("Program", @$.first_line, 1, $1);
+            }
+            prog_root = $$;
+        }
 ;
 
 ExtDefList:
     ExtDef ExtDefList
         { $$ = make_yylval("ExtDefList", @$.first_line, 2, $1, $2); }
-|   /* empty */
+|   %empty
         { $$ = make_yylval("ExtDefList", @$.first_line, 0); }
 ;
 
@@ -73,6 +82,11 @@ ExtDecList:
         { $$ = make_yylval("ExtDecList", @$.first_line, 1, $1); }
 |   VarDec COMMA ExtDecList
         { $$ = make_yylval("ExtDecList", @$.first_line, 3, $1, $2, $3); }
+|   error COMMA ExtDecList
+        {
+            $$ = make_yylval("ExtDecList", @$.first_line, 3, $1, $2, $3);
+            yyerrok; errors++;
+        }
 ;
 
 // Specifiers
@@ -86,6 +100,9 @@ Specifier:
 StructSpecifier:
     STRUCT OptTag LC DefList RC
         { $$ = make_yylval("StructSpecifier", @$.first_line, 5, $1, $2, $3, $4, $5); }
+|   STRUCT OptTag LC error RC
+        { $$ = make_yylval("StructSpecifier", @$.first_line, 5, $1, $2, $3, $4, $5);
+          yyerrok; errors++; }
 |   STRUCT Tag
         { $$ = make_yylval("StructSpecifier", @$.first_line, 2, $1, $2); }
 ;
@@ -93,7 +110,7 @@ StructSpecifier:
 OptTag:
     ID
         { $$ = make_yylval("OptTag", @$.first_line, 1, $1); }
-|   /* empty */
+|   %empty
         { $$ = make_yylval("OptTag", @$.first_line, 0); }
 ;
 
@@ -108,11 +125,21 @@ VarDec:
         { $$ = make_yylval("VarDec", @$.first_line, 1, $1); }
 |   VarDec LB INT RB
         { $$ = make_yylval("VarDec", @$.first_line, 4, $1, $2, $3, $4); }
+|   VarDec LB error RB
+        {
+            $$ = make_yylval("VarDec", @$.first_line, 4, $1, $2, $3, $4);
+            yyerrok; errors++;
+        }
 ;
 
 FunDec:
     ID LP VarList RP
         { $$ = make_yylval("FunDec", @$.first_line, 4, $1, $2, $3, $4); }
+|   ID LP error RP
+        { 
+            $$ = make_yylval("FunDec", @$.first_line, 4, $1, $2, $3, $4); 
+            yyerrok; errors++;
+        }
 |   ID LP RP
         { $$ = make_yylval("FunDec", @$.first_line, 3, $1, $2, $3); }
 ;
@@ -133,12 +160,17 @@ ParamDec:
 CompSt:
     LC DefList StmtList RC
         { $$ = make_yylval("CompSt", @$.first_line, 4, $1, $2, $3, $4); }
+|    LC DefList error RC
+        { 
+            $$ = make_yylval("CompSt", @$.first_line, 4, $1, $2, $3, $4);
+            yyerrok; errors;
+        }
 ;
 
 StmtList:
     Stmt StmtList
         { $$ = make_yylval("StmtList", @$.first_line, 2, $1, $2); }
-|   /* empty */
+|   %empty
         { $$ = make_yylval("StmtList", @$.first_line, 0); }
 ;
 
@@ -155,13 +187,33 @@ Stmt:
         { $$ = make_yylval("Stmt", @$.first_line, 7, $1, $2, $3, $4, $5, $6, $7); }
 |   WHILE LP Exp RP Stmt
         { $$ = make_yylval("Stmt", @$.first_line, 5, $1, $2, $3, $4, $5); }
+|   IF LP error RP Stmt %prec LOWER_THAN_ELSE
+        { 
+            $$ = make_yylval("Stmt", @$.first_line, 5, $1, $2, $3, $4, $5); 
+            yyerrok; errors++;
+        }
+|   IF LP error RP Stmt ELSE Stmt
+        { 
+            $$ = make_yylval("Stmt", @$.first_line, 7, $1, $2, $3, $4, $5, $6, $7); 
+            yyerrok; errors++;
+        }
+|   WHILE LP error RP Stmt
+        { 
+            $$ = make_yylval("Stmt", @$.first_line, 5, $1, $2, $3, $4, $5); 
+            yyerrok; errors++;
+        }
+|   error SEMI
+        {
+            $$ = make_yylval("Stmt", @$.first_line, 0);
+            yyerrok; errors++;
+        }
 ;
 
 // Local Definitions
 DefList:
     Def DefList
         { $$ = make_yylval("DefList", @$.first_line, 2, $1, $2); }
-|   /* empty */
+|   %empty
         { $$ = make_yylval("DefList", @$.first_line, 0); }
 ;
 
@@ -204,31 +256,47 @@ Exp:
         { $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3); }
 |   LP Exp RP
         { $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3); }
-|   MINUS Exp
+|   LP error RP
+        { 
+            $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3); 
+            yyerrok; errors++;
+        }
+|   MINUS Exp %prec NEG
         { $$ = make_yylval("Exp", @$.first_line, 2, $1, $2); }
 |   NOT Exp
         { $$ = make_yylval("Exp", @$.first_line, 2, $1, $2); }
 |   ID LP Args RP
         { $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4); }
+|   ID LP error RP
+        { 
+            $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4);
+            yyerrok; errors++;
+        }
 |   ID LP RP
         { $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3); }
 |   Exp LB Exp RB
         { $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4); }
+|   Exp LB error RB
+        { $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4); 
+          yyerrok; errors++;}
 |   Exp DOT ID
         { $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3); }
-|   ID {
-        $$ = make_yylval("Exp", @$.first_line, 1, $1); 
-        $$->ident = $1->ident;
-        // TODO() ALL OF ABOVE
-    }
-|   INT {
-        $$ = make_yylval("Exp", @$.first_line, 1, $1);
-        $$->dval = (double)$1->ival;
-    }
-|   FLOAT {
-        $$ = make_yylval("Exp", @$.first_line, 1, $1);
-        $$->dval = (double)$1->fval;
-    }
+|   ID 
+        {
+            $$ = make_yylval("Exp", @$.first_line, 1, $1); 
+            $$->ident = $1->ident;
+            // TODO() ALL OF ABOVE
+        }
+|   INT 
+        {
+            $$ = make_yylval("Exp", @$.first_line, 1, $1);
+            $$->dval = (double)$1->ival;
+        }
+|   FLOAT 
+        {
+            $$ = make_yylval("Exp", @$.first_line, 1, $1);
+            $$->dval = (double)$1->fval;
+        }
 ;
 
 Args:

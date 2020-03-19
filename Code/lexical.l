@@ -9,6 +9,7 @@
 
 #define TOKEN(t) (yylval->token = t)
 
+extern int errors;
 int yycolumn = 1;
 
 #define YY_USER_ACTION \
@@ -35,9 +36,9 @@ _INT10              ([1-9][0-9]*)|0
 _INT16              (0[x|X][0-9a-fA-F]+)
 _W_INT8             (0[0-9]+)
 _W_INT16            (0[x|X][0-9a-zA-Z]*)
-_FLOAT              ([0-9]+\.[0-9]+([eE][-+]?[0-9]+)?)
-_W_FLOAT            ([0-9]+\.[0-9]+([eE][-+]?[0-9]?)?)
-
+_FLOAT              ([0-9]+\.[0-9]+)
+_FLOAT_E            ((([0-9]*\.[0-9]+)|([0-9]+\.[0-9]*))[eE][-+]?)[0-9]+
+_W_FLOAT            ((([0-9]*\.[0-9]+)|([0-9]+\.[0-9]*))[-+a-zA-Z0-9]*)
 _ID                 ([_a-zA-Z][_a-zA-Z0-9]*)
 _W_ID               ([_a-zA-Z0-9]+)
 _RELOP              (>=|<=|==|!=|>|<)
@@ -46,13 +47,17 @@ _DELIM              ([ \t\r])
 _SINGLE_COMMENT     ("//"[^\n]*)
 
 %%
-[\n]                { yycolumn = 1;}
+[\n]                { yycolumn = 1; }
 {_DELIM}            { /* ignore the extra delimiters */}
 {_SINGLE_COMMENT}   { /* skip the comment */ }
-"/*"                { BEGIN(MUL_COMMENT); }
-<MUL_COMMENT>"*/"   { BEGIN(INITIAL); }
-<MUL_COMMENT>\n     { /* yylineno will auto increase */ }
-<MUL_COMMENT>.      { /* skip the comment */ }
+"/*"                    { BEGIN(MUL_COMMENT); }
+<MUL_COMMENT>"*/"       { BEGIN(INITIAL); }
+<MUL_COMMENT>\n         { /* yylineno will auto increase */ }
+<MUL_COMMENT>.          { /* skip the comment */ }
+<MUL_COMMENT><<EOF>>    { 
+        token_error("Incomplete multiline comment");
+        errors++; BEGIN(INITIAL);
+    }
 
 {_RELOP}            {
     init_yylval("RELOP");
@@ -163,7 +168,10 @@ _SINGLE_COMMENT     ("//"[^\n]*)
     return TOKEN(INT);
 }
 {_W_INT8}           {
+    errors++;
     token_error("Illegal octal number");
+    init_yylval("W_INT8");
+    return TOKEN(INT);
 }
 {_INT16}            {
     init_yylval("INT");
@@ -171,15 +179,15 @@ _SINGLE_COMMENT     ("//"[^\n]*)
     return TOKEN(INT);
 }
 {_W_INT16}          {
+    errors++;
     token_error("Illegal hexadecimal number");
+    init_yylval("W_INT16");
+    return TOKEN(INT);
 }
-{_FLOAT}            {
+{_FLOAT_E}|{_FLOAT} {
     init_yylval("FLOAT");
     yylval->fval = atof(yytext);
     return TOKEN(FLOAT);
-}
-{_W_FLOAT}          {
-    token_error("Illegal floating point number");
 }
 {_ID}               {
     init_yylval("ID");
@@ -187,10 +195,21 @@ _SINGLE_COMMENT     ("//"[^\n]*)
     return TOKEN(ID);
 }
 {_W_ID}             {
+    errors++;
     token_error("Illegal identifier");
+    init_yylval("W_ID");
+    yylval->ident = NULL;
+    return TOKEN(ID);
+}
+{_W_FLOAT}          {
+    errors++;
+    token_error("Illegal floating point number");
+    init_yylval("W_FLOAT");
+    return TOKEN(FLOAT);
 }
 
 .                   {
+    errors++;
     token_error("Mysterious character");
 }
 

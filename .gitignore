@@ -1,4 +1,4 @@
-parse
-scanner
-**.output
-compilers-tests
+Code/parse
+Code/scanner
+**/*.output
+compilers-tests/
