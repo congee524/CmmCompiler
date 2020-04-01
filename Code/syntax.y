@@ -4,8 +4,6 @@
 #include "lex.yy.c"
 #include "ptypes.h"
 
-struct Node* prog_root;
-
 int errors;
 
 int yylex();
@@ -57,7 +55,8 @@ Program:
             } else {
                 $$ = make_yylval("Program", @$.first_line, 1, $1);
             }
-            prog_root = $$;
+            if (!errors) printParserTree($$, 0);
+
         }
 ;
 
@@ -74,6 +73,8 @@ ExtDef:
 |   Specifier SEMI
         { $$ = make_yylval("ExtDef", @$.first_line, 2, $1, $2); }
 |   Specifier FunDec CompSt
+        { $$ = make_yylval("ExtDef", @$.first_line, 3, $1, $2, $3); }
+|   Specifier FunDec SEMI
         { $$ = make_yylval("ExtDef", @$.first_line, 3, $1, $2, $3); }
 ;
 
@@ -160,7 +161,7 @@ ParamDec:
 CompSt:
     LC DefList StmtList RC
         { $$ = make_yylval("CompSt", @$.first_line, 4, $1, $2, $3, $4); }
-|    LC DefList error RC
+|   LC DefList error RC
         { 
             $$ = make_yylval("CompSt", @$.first_line, 4, $1, $2, $3, $4);
             yyerrok; errors;
@@ -309,7 +310,7 @@ Args:
 %%
 
 void yyerror(const char *s) {
-    fprintf(stderr, "\033[31mError \033[0mtype \033[34mB \033[0mat Line \033[34m%d\033[0m: %s.\n", yylineno, s);
+    fprintf(stderr, "Error type B at Line %d: %s.\n", yylineno, s);
 }
 
 struct Node* make_yylval(char *sname, int line, int num, ...) {
