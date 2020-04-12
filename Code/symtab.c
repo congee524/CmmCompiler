@@ -11,3 +11,19 @@ static unsigned int hash(char* name)
     }
     return val;
 }
+
+Type GetType(Node* spec)
+{
+    assert(spec != NULL);
+    assert(strcmp(spec->symbol, "Specifier") == 0);
+    assert(spec->n_child == 1);
+
+    Node* tmp = spec->child[0];
+    if (!strcmp(tmp->symbol, "TYPE")) {
+        TODO()
+    } else if (!strcmp(tmp->symbol, "StructSpecifier")) {
+        TODO()
+    } else {
+        assert(0);
+    }
+}

@@ -1,6 +1,7 @@
 #ifndef SYMTAB_H__
 #define SYMTAB_H__
 
+#include "ptypes.h"
 #include <stdio.h>
 
 typedef struct SymTable_ SymTable;
@@ -27,7 +28,7 @@ struct Type_ {
             int size;
         } array;
         FieldList structure;
-    };
+    } u;
 };
 
 struct FieldList_ {
@@ -35,5 +36,7 @@ struct FieldList_ {
     Type type;
     FieldList next;
 };
+
+Type GetType(Node* spec);
 
 #endif

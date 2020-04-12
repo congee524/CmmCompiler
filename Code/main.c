@@ -8,7 +8,7 @@ extern int yylineno, yycolumn, errors;
 extern int yylex_destroy(void);
 extern int yyparse();
 extern void yyrestart(FILE* s);
-extern void printParserTree(struct Node* node, int level);
+extern void PrintParserTree(struct Node* node, int level);
 
 int main(int argc, char** argv)
 {

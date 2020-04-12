@@ -3,6 +3,7 @@
 #include <assert.h>
 #include "lex.yy.c"
 #include "ptypes.h"
+#include "semantic.h"
 
 int errors;
 
@@ -10,7 +11,7 @@ int yylex();
 void yyerror(const char *s);
 struct Node* make_yylval(char* sname, int line, int num, ...);
 
-void printParserTree(struct Node* node, int level);
+void PrintParserTree(struct Node* node, int level);
 
 %}
 
@@ -54,7 +55,13 @@ Program:
         } else {
             $$ = make_yylval("Program", @$.first_line, 1, $1);
         }
-        if (!errors) printParserTree($$, 0);
+        if (!errors) {
+            /* CP1 */
+            // PrintParserTree($$, 0);
+
+            /* CP2 */
+            SemanticAnalysis($$);
+        }
     }
 ;
 
@@ -78,6 +85,7 @@ ExtDef:
         $$ = make_yylval("ExtDef", @$.first_line, 3, $1, $2, $3);
     }
 |   Specifier FunDec SEMI {
+        /* declare funciton in global field */
         $$ = make_yylval("ExtDef", @$.first_line, 3, $1, $2, $3);
     }
 ;
@@ -151,7 +159,7 @@ FunDec:
     ID LP VarList RP {
         $$ = make_yylval("FunDec", @$.first_line, 4, $1, $2, $3, $4);
     }
-|   ID LP error RP { 
+|   ID LP error RP {
         $$ = make_yylval("FunDec", @$.first_line, 4, $1, $2, $3, $4); 
         yyerrok; errors++;
     }
@@ -379,7 +387,7 @@ struct Node* make_yylval(char *sname, int line, int num, ...) {
     return ret;
 }
 
-void printParserTree(struct Node* node, int level)
+void PrintParserTree(struct Node* node, int level)
 {
     if (node->token == 0 && node->n_child == 0) return;
     printf("%*s", 2 * level, "");
@@ -406,6 +414,6 @@ void printParserTree(struct Node* node, int level)
     printf("\n");
     for (int i = 0; i < node->n_child; i++) {
         // printf("%d %x %X %X\n", i, node, node->child[i], node->child[i]->child[i]);
-        printParserTree(node->child[i], level + 1);
+        PrintParserTree(node->child[i], level + 1);
     }
 }

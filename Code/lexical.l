@@ -25,7 +25,7 @@ int yycolumn = 1;
 
 void init_yylval(char* sname);
 
-void token_error(char* err_text);
+void TokenError(char* err_text);
 %}
 
 %x MUL_COMMENT
@@ -55,7 +55,7 @@ _SINGLE_COMMENT     ("//"[^\n]*)
 <MUL_COMMENT>\n         { /* yylineno will auto increase */ }
 <MUL_COMMENT>.          { /* skip the comment */ }
 <MUL_COMMENT><<EOF>>    { 
-        token_error("Incomplete multiline comment");
+        TokenError("Incomplete multiline comment");
         errors++; BEGIN(INITIAL);
     }
 
@@ -169,7 +169,7 @@ _SINGLE_COMMENT     ("//"[^\n]*)
 }
 {_W_INT8}           {
     errors++;
-    token_error("Illegal octal number");
+    TokenError("Illegal octal number");
     init_yylval("W_INT8");
     return TOKEN(INT);
 }
@@ -180,7 +180,7 @@ _SINGLE_COMMENT     ("//"[^\n]*)
 }
 {_W_INT16}          {
     errors++;
-    token_error("Illegal hexadecimal number");
+    TokenError("Illegal hexadecimal number");
     init_yylval("W_INT16");
     return TOKEN(INT);
 }
@@ -196,21 +196,21 @@ _SINGLE_COMMENT     ("//"[^\n]*)
 }
 {_W_ID}             {
     errors++;
-    token_error("Illegal identifier");
+    TokenError("Illegal identifier");
     init_yylval("W_ID");
     yylval->ident = NULL;
     return TOKEN(ID);
 }
 {_W_FLOAT}          {
     errors++;
-    token_error("Illegal floating point number");
+    TokenError("Illegal floating point number");
     init_yylval("W_FLOAT");
     return TOKEN(FLOAT);
 }
 
 .                   {
     errors++;
-    token_error("Mysterious character");
+    TokenError("Mysterious character");
 }
 
 %%
@@ -226,7 +226,7 @@ void init_yylval(char* sname) {
 #endif
 }
 
-void token_error(char* err_text)
+void TokenError(char* err_text)
 {
     fprintf(stderr, "Error type A at Line %d: %s \'%s\'.\n", yylineno, err_text, yytext);
 }
