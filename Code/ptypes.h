@@ -1,7 +1,7 @@
 #ifndef _PTYPES_H__
 #define _PTYPES_H__
 
-struct Node {
+typedef struct Node {
     int token;
     char* symbol;
     int line;
@@ -13,7 +13,7 @@ struct Node {
         double dval;
         char* ident;
     };
-};
+} Node;
 
 // struct YYSTYPE {
 //     int token;

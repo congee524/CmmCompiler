@@ -1,6 +1,13 @@
 #include "symtab.h"
 
-void semanticError(int error_num, int lineno, char* errtext)
+static unsigned int hash(char* name)
 {
-    fprintf(stderr, "Error type %d at Line %d: %s.", error_num, lineno, errtext);
+    unsigned int val = 0, i;
+    for (; *name; ++name) {
+        val = (val << 2) + *name;
+        if (i = val & ~0x3fff) {
+            val = (val ^ (i >> 22)) & 0x3fff;
+        }
+    }
+    return val;
 }

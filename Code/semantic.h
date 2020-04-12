@@ -1,6 +1,7 @@
 #ifndef SEMANTIC_H__
 #define SEMANTIC_H__
 #include "ptypes.h"
+#include <stdio.h>
 
 void semanticError(int error_num, int lineno, char* errtext);
 
