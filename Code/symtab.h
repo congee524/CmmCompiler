@@ -49,6 +49,8 @@ Type GetType(Node* spec);
 
 FieldList StructSpecAnalysis(Node* struct_spec);
 
-char* RecurDecList(Node* root, int* dimen, int* size)
+char* TraceVarDec(Node* var_dec, int* dim, int* size);
+
+Type ConstArray(Type fund, int dim, int* size, int level);
 
 #endif

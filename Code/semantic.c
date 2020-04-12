@@ -160,9 +160,10 @@ FieldList StructSpecAnalysis(Node* struct_spec)
         FieldList cur = ret;
         Node* def_list = struct_spec->child[3];
         while (def_list->n_child == 2) {
-            Type cur_type = GetType(def_list->child[0]->child[0]);
-            Node* dec_list = def_list->child[1];
-            while (dec_list->n_child == 3) {
+            Node* def = def_list->child[0];
+            Type cur_type = GetType(def->child[0]);
+            Node* dec_list = def->child[1];
+            do {
                 Node* dec = dec_list->child[0];
                 if (dec->n_child == 3) {
                     /* initial the variable in struture */
@@ -174,22 +175,40 @@ FieldList StructSpecAnalysis(Node* struct_spec)
                 TODO() /* check same name */
 
                 Node* var_dec = dec->child[0];
-                int dim = 0,
-                    if (var_dec->n_child == 4)
-                {
-                    /* array */
-                    TODO()
+                int dim = 0, size[256];
+                char* var_name = TraceVarDec(dec->child[0], &dim, size);
+                /* check whether duplicated field exist */
+                FieldList check_field = ret;
+                int flag = 1;
+                while (check_field) {
+                    if (!strcmp(check_field, var_name)) {
+                        flag = 0;
+                        break;
+                    }
+                    check_field = check_field->next;
                 }
-                else if (var_dec->n_child == 1)
-                {
-                    TODO()
+
+                if (!flag) {
+                    char msg[128];
+                    sprintf(msg, "Redefined field \"%s\"", var_name);
+                    SemanticError(15, dec->child[0]->line, msg);
+                } else {
+                    cur->name = strdup(var_name);
+                    if (dim == 0) {
+                        cur->type = cur_type;
+                    } else {
+                        cur->type = (Type)malloc(sizeof(struct Type_));
+                        cur->type->kind = ARRAY;
+                        cur->type->u.array.size = size;
+                        cur->type->u.array.elem =
+                    }
                 }
-                else
-                {
-                    assert(0);
+                if (dec_list->n_child == 3) {
+                    dec_list = dec_list->child[2];
+                } else {
+                    dec_list = NULL;
                 }
-                dec_list = dec_list->child[2];
-            }
+            } while (dec_list);
             cur = cur->next;
             def_list = def_list->child[1];
         }
@@ -199,6 +218,18 @@ FieldList StructSpecAnalysis(Node* struct_spec)
     return ret;
 }
 
-char* RecurDecList(Node* root, int* dimen, int* size)
+char* TraceVarDec(Node* var_dec, int* dim, int* size)
 {
+    /* to get array or ID */
+    char* ret;
+    if (var_dec->n_child == 1) {
+        ret = var_dec->child[0]->ident;
+    } else if (var_dec->n_child == 4) {
+        size[dim] = var_dec->child[2]->ival;
+        *dim = *dim + 1;
+        ret = TraceVarDec(var_dec->child[0], dim, size);
+    } else {
+        assert(0);
+    }
+    return ret;
 }
