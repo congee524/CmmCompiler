@@ -2,6 +2,7 @@
 #define SYMTAB_H__
 
 #include "ptypes.h"
+#include <assert.h>
 #include <stdio.h>
 
 typedef struct SymTable_ SymTable;
@@ -20,9 +21,10 @@ SymTable symtable[0x3fff + 1];
 struct Type_ {
     enum { BASIC,
         ARRAY,
-        STRUCT } kind;
+        STRUCTURE } kind;
     union {
-        int basic;
+        enum { INT,
+            FLOAT } basic;
         struct {
             Type elem;
             int size;
@@ -37,6 +39,16 @@ struct FieldList_ {
     FieldList next;
 };
 
+void SemanticError(int error_num, int lineno, char* errtext);
+
+void SemanticAnalysis(Node* root);
+
+void ExtDefAnalysis(Node* root);
+
 Type GetType(Node* spec);
+
+FieldList StructSpecAnalysis(Node* struct_spec);
+
+char* RecurDecList(Node* root, int* dimen, int* size)
 
 #endif
