@@ -155,10 +155,14 @@ FieldList StructSpecAnalysis(Node* struct_spec)
         }
 
         /* there not exist duplicated name, begin define */
-        ret = (FieldList)malloc(sizeof(struct FieldList_));
-        ret->next = NULL;
-        FieldList cur = ret;
+        FieldList cur;
         Node* def_list = struct_spec->child[3];
+        if (def_list->n_child == 2) {
+            /* not empty structure */
+            ret = (FieldList)malloc(sizeof(struct FieldList_));
+            ret->next = NULL;
+            FieldList cur = ret;
+        }
         while (def_list->n_child == 2) {
             Node* def = def_list->child[0];
             Type cur_type = GetType(def->child[0]);
@@ -194,23 +198,26 @@ FieldList StructSpecAnalysis(Node* struct_spec)
                     SemanticError(15, dec->child[0]->line, msg);
                 } else {
                     cur->name = strdup(var_name);
-                    if (dim == 0) {
-                        cur->type = cur_type;
-                    } else {
-                        cur->type = (Type)malloc(sizeof(struct Type_));
-                        cur->type->kind = ARRAY;
-                        cur->type->u.array.size = size;
-                        cur->type->u.array.elem =
-                    }
+                    cur->type = ConstArray(cur_type, dim, size, 0);
                 }
                 if (dec_list->n_child == 3) {
                     dec_list = dec_list->child[2];
+                    cur->next = (FieldList)malloc(sizeof(struct FieldList_));
+                    cur->next->next = NULL;
+                    cur = cur->next;
                 } else {
                     dec_list = NULL;
                 }
             } while (dec_list);
-            cur = cur->next;
+
             def_list = def_list->child[1];
+            if (def_list->n_child == 2) {
+                cur->next = (FieldList)malloc(sizeof(struct FieldList_));
+                cur = cur->next;
+                cur->next = NULL;
+            } else {
+                break;
+            }
         }
     } else {
         assert(0);
@@ -225,11 +232,28 @@ char* TraceVarDec(Node* var_dec, int* dim, int* size)
     if (var_dec->n_child == 1) {
         ret = var_dec->child[0]->ident;
     } else if (var_dec->n_child == 4) {
+        /* support max 256 dimension */
+        if (dim >= 256) {
+            fprintf(stderrr, "support maximum 256 dimension!\n");
+            return NULL;
+        }
         size[dim] = var_dec->child[2]->ival;
         *dim = *dim + 1;
         ret = TraceVarDec(var_dec->child[0], dim, size);
     } else {
         assert(0);
     }
+    return ret;
+}
+
+Type ConstArray(Type fund, int dim, int* size, int level)
+{
+    if (level == dim) {
+        return fund;
+    }
+    Type ret = (Type)malloc(sizeof(struct Type_));
+    ret->kind = ARRAY;
+    ret->u.array.elem = ConstArray(fund, dim, size, level + 1);
+    ret->u.array.size = size[dim - level - 1];
     return ret;
 }
