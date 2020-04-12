@@ -16,7 +16,7 @@ struct SymTable_ {
     SymTable next;
 };
 
-SymTable symtable[0x3fff + 1];
+SymTable symtable[0x3fff + 1] = { NULL };
 
 struct Type_ {
     enum { BASIC,
@@ -30,6 +30,10 @@ struct Type_ {
             int size;
         } array;
         FieldList structure;
+        // struct {
+        //     char* struct_name;
+        //     FieldList structure;
+        // };
     } u;
 };
 
@@ -45,12 +49,14 @@ void SemanticAnalysis(Node* root);
 
 void ExtDefAnalysis(Node* root);
 
-Type GetType(Node* spec);
+Type SpecAnalysis(Node* spec);
 
-FieldList StructSpecAnalysis(Node* struct_spec);
+Type StructSpecAnalysis(Node* struct_spec);
 
 char* TraceVarDec(Node* var_dec, int* dim, int* size);
 
 Type ConstArray(Type fund, int dim, int* size, int level);
+
+SymTable InsertSymTab(char* type_name, Type type);
 
 #endif
