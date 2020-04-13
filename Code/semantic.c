@@ -68,6 +68,29 @@ void ExtDefAnalysis(Node* root)
     }
 }
 
+FuncTable FunDecAnalysis(Node* root, Type type)
+{
+    /* get Func here */
+    assert(root != NULL);
+    FuncTable ret = (FuncTable)malloc(sizeof(struct FuncTable_));
+    ret->name = strdup(root->child[0]->ident);
+    ret->lineno = root->child[0]->line;
+    ret->ret_type = type;
+    ret->isDefined = 0;
+    ret->next = NULL;
+
+    /* check parameter */
+    if (root->n_child == 3) {
+        ret->para = NULL;
+    } else if (root->n_child == 4) {
+        TODO()
+    } else {
+        assert(0);
+    }
+
+    return ret;
+}
+
 void ExtDecListAnalysis(Node* root, Type type)
 {
     /*  ExtDef: Specifier ExtDecList SEMI
@@ -116,10 +139,6 @@ Type SpecAnalysis(Node* spec)
     } else if (!strcmp(tmp->symbol, "StructSpecifier")) {
         INFO("STRUCT");
         ret = StructSpecAnalysis(tmp);
-        // ret->kind = STRUCTURE;
-        // int isDefine = 0;
-        // ret->u.structure = StructSpecAnalysis(tmp, &isDefine);
-        /* allow for empty structure */
     } else {
         assert(0);
     }
@@ -129,6 +148,7 @@ Type SpecAnalysis(Node* spec)
 Type StructSpecAnalysis(Node* struct_spec)
 {
     /* if return NULL then error happen or empty struture */
+    /* ret leak when define error happen */
     assert(struct_spec != NULL);
     assert(struct_spec->n_child >= 2);
 
