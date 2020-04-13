@@ -1,4 +1,3 @@
-#include "ptypes.h"
 #include <stdio.h>
 
 // #define DEBUG
@@ -8,7 +7,6 @@ extern int yylineno, yycolumn, errors;
 extern int yylex_destroy(void);
 extern int yyparse();
 extern void yyrestart(FILE* s);
-extern void PrintParserTree(struct Node* node, int level);
 
 int main(int argc, char** argv)
 {

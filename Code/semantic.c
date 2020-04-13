@@ -1,12 +1,14 @@
 #include "symtab.h"
 
+SymTable symtable[0x3fff + 1] = { NULL };
+
 #define TODO()                       \
     {                                \
         printf("unfinished part\n"); \
         assert(0);                   \
     }
 
-static void SemanticError(int error_num, int lineno, char* errtext)
+void SemanticError(int error_num, int lineno, char* errtext)
 {
     fprintf(stderr, "Error type %d at Line %d: %s.", error_num, lineno, errtext);
 }
@@ -26,16 +28,13 @@ static unsigned int hash(char* name)
 void SemanticAnalysis(Node* root)
 {
     assert(root != NULL);
-    Node* tmp = NULL;
-    for (int i = 0; i < root->n_child; i++) {
-        tmp = root->child[i];
-        if (!strcmp(tmp->symbol, "ExtDefList")) {
-            SemanticAnalysis(tmp);
-        } else if (!strcmp(tmp->symbol, "ExtDef")) {
-            ExtDefAnalysis(tmp);
-        } else {
-            assert(0);
-        }
+    if (root->n_child == 2) {
+        /* ExtDefList := ExtDef ExtDefList */
+        ExtDefAnalysis(root->child[0]);
+        SemanticAnalysis(root->child[1]);
+    } else if (root->n_child == 1) {
+        /* Program := ExtDefList */
+        SemanticAnalysis(root->child[0]);
     }
 }
 
@@ -43,12 +42,18 @@ void ExtDefAnalysis(Node* root)
 {
     assert(root != NULL);
     assert(root->n_child >= 2);
+
     Node* tmp = root->child[1];
+    Type type = SpecAnalysis(root->child[0]);
+
     if (!strcmp(tmp->symbol, "ExtDecList")) {
         /* Specifier ExtDecList SEMI */
         TODO()
     } else if (!strcmp(tmp->symbol, "SEMI")) {
-        TODO()
+        /* Specifier SEMI
+           has define structure in SpecAnalysis;
+         */
+        return;
     } else if (!strcmp(tmp->symbol, "FunDec")) {
         if (!strcmp(root->child[2]->symbol, "CompSt")) {
             TODO()
@@ -75,9 +80,9 @@ Type SpecAnalysis(Node* spec)
         ret = (Type)malloc(sizeof(struct Type_));
         ret->kind = BASIC;
         if (!strcmp(tmp->ident, "int")) {
-            ret->u.basic = INT;
+            ret->u.basic = 0;
         } else if (!strcmp(tmp->ident, "float")) {
-            ret->u.basic = FLOAT;
+            ret->u.basic = 1;
         } else {
             assert(0);
         }
@@ -97,7 +102,7 @@ Type StructSpecAnalysis(Node* struct_spec)
 {
     /* if return NULL then error happen or empty struture */
     assert(struct_spec != NULL);
-    assert(structure->n_child >= 2);
+    assert(struct_spec->n_child >= 2);
 
     Type ret = (Type)malloc(sizeof(struct Type_));
     Node* tag = struct_spec->child[1];
@@ -111,13 +116,13 @@ Type StructSpecAnalysis(Node* struct_spec)
         if (symtable[tag_idx] != NULL) {
             SymTable temp = symtable[tag_idx];
             while (temp) {
-                if (!strcmp(temp->name, tag->child[0]->ident && temp->type->kind != STRUCTURE)) {
+                if (!strcmp(temp->name, tag->child[0]->ident) && temp->type->kind != STRUCTURE) {
                     /* duplicated structure name */
                     char msg[128]; /* the length of ID is less than 32 */
                     sprintf(msg, "Duplicated structure name \"%s\"", tag->child[0]->ident);
                     SemanticError(16, tag->line, msg);
                     return ret;
-                } else if (!strcmp(temp->name, tag->child[0]->ident) {
+                } else if (!strcmp(temp->name, tag->child[0]->ident)) {
                     if (ret->u.structure != NULL) {
                         /* shouldn't arrive here 
                            it means there are multiple the same structure
@@ -183,7 +188,7 @@ Type StructSpecAnalysis(Node* struct_spec)
                     /* initial the variable in struture */
                     char msg[128];
                     sprintf(msg, "Initialize the domain of the structure");
-                    SemanticError(15, dec->lin, msg);
+                    SemanticError(15, dec->line, msg);
                 }
                 /* add the domain regardless of initialization */
 
@@ -194,7 +199,7 @@ Type StructSpecAnalysis(Node* struct_spec)
                 FieldList check_field = ret->u.structure;
                 int flag = 1;
                 while (check_field) {
-                    if (!strcmp(check_field, var_name)) {
+                    if (!strcmp(check_field->name, var_name)) {
                         flag = 0;
                         break;
                     }
@@ -244,11 +249,11 @@ char* TraceVarDec(Node* var_dec, int* dim, int* size)
         ret = var_dec->child[0]->ident;
     } else if (var_dec->n_child == 4) {
         /* support max 256 dimension */
-        if (dim >= 256) {
-            fprintf(stderrr, "support maximum 256 dimension!\n");
+        if (*dim >= 256) {
+            fprintf(stderr, "support maximum 256 dimension!\n");
             return NULL;
         }
-        size[dim] = var_dec->child[2]->ival;
+        size[*dim] = var_dec->child[2]->ival;
         *dim = *dim + 1;
         ret = TraceVarDec(var_dec->child[0], dim, size);
     } else {
@@ -278,8 +283,8 @@ SymTable InsertSymTab(char* type_name, Type type)
     // don't allow duplicated name TODO()
     ret = (SymTable)malloc(sizeof(struct SymTable_));
     ret->name = strdup(type_name);
-    ret->Type = type;
-    ret->next = symtable[tag_idx];
+    ret->type = type;
+    ret->next = symtable[idx];
     symtable[idx] = ret;
 
     return ret;

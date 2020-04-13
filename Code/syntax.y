@@ -1,16 +1,12 @@
 %{
-#include <stdarg.h>
-#include <assert.h>
+// #include "symtab.h"
 #include "lex.yy.c"
-#include "ptypes.h"
-#include "semantic.h"
 
 int errors;
 
 int yylex();
 void yyerror(const char *s);
 struct Node* make_yylval(char* sname, int line, int num, ...);
-
 void PrintParserTree(struct Node* node, int level);
 
 %}
@@ -57,7 +53,7 @@ Program:
         }
         if (!errors) {
             /* CP1 */
-            // PrintParserTree($$, 0);
+            PrintParserTree($$, 0);
 
             /* CP2 */
             SemanticAnalysis($$);

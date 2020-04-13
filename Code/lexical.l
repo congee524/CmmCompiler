@@ -1,8 +1,7 @@
 %{
 #include "syntax.tab.h"
-#include <stdlib.h>
-#include <string.h>
-#include "ptypes.h"
+#include "symtab.h"
+
 // #include "token.h"
 
 // #define DEBUG
