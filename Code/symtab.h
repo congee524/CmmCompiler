@@ -26,7 +26,6 @@ typedef struct SymTable_* SymTable;
 typedef struct Type_* Type;
 typedef struct FieldList_* FieldList;
 typedef struct FuncTable_* FuncTable;
-typedef struct CompSTField_* CompSTFiled;
 
 typedef struct Node {
     int token;
@@ -57,7 +56,6 @@ struct FuncTable_ {
     Type ret_type;
     FieldList para;
     int isDefined;
-    CompSTFiled compst;
     FuncTable next;
 };
 

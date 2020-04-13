@@ -1,6 +1,6 @@
 #include "symtab.h"
 
-SymTable symtable[0x3fff + 1] = { NULL };
+SymTable symtable[0x3fff + 1];
 FuncTable FuncHead;
 struct FieldSTACK_ fieldstack;
 
@@ -321,7 +321,7 @@ int InsertSymTab(char* type_name, Type type, int lineno)
 void DeleteLocalVar()
 {
     assert(fieldstack.depth > 0);
-    SymTable temp = fieldstack.var_stack[depth - 1];
+    SymTable temp = fieldstack.var_stack[fieldstack.depth - 1];
     SymTable to_del;
     unsigned int idx;
     while (temp->next) {
@@ -348,6 +348,7 @@ void DeleteLocalVar()
 int CheckSymTab(char* type_name, Type type, int lineno)
 {
     int ret = 1;
+    unsigned int idx = hash(type_name);
     if (fieldstack.depth == 0) {
         if (symtable[idx] != NULL) {
             SymTable temp = symtable[idx];
@@ -369,7 +370,7 @@ int CheckSymTab(char* type_name, Type type, int lineno)
             }
         }
         if (ret) {
-            temp = fieldstack.var_stack[depth - 1];
+            temp = fieldstack.var_stack[fieldstack.depth - 1];
             while (temp->next) {
                 temp = temp->next;
                 if (!strcmp(temp->name, type_name)) {
@@ -396,10 +397,44 @@ int CheckSymTab(char* type_name, Type type, int lineno)
 
 void InitProg()
 {
+    for (int i = 0; i <= 0x3fff; i++) {
+        if (symtable[i]) {
+            SymTable temp = symtable[i];
+            SymTable to_del;
+            while (temp->next) {
+                to_del = temp;
+                temp = temp->next;
+                free(to_del);
+            }
+            free(temp);
+        }
+        symtable[i] = NULL;
+    }
+
+    if (FuncHead) {
+        SymTable temp = FuncHead;
+        SymTable to_del;
+        while (temp->next) {
+            to_del = temp;
+            temp = temp->next;
+            free(to_del);
+        }
+        free(temp);
+    }
     FuncHead = (FuncTable)malloc(sizeof(struct FuncTable_));
     FuncHead->next = NULL;
 
     fieldstack.depth = 0;
+    if (fieldstack.StructHead) {
+        SymTable temp = fieldstack.StructHead;
+        SymTable to_del;
+        while (temp->next) {
+            to_del = temp;
+            temp = temp->next;
+            free(to_del);
+        }
+        free(temp);
+    }
     fieldstack.StructHead = (SymTable)malloc(sizeof(struct SymTable_));
     fieldstack.StructHead->next = NULL;
 }
