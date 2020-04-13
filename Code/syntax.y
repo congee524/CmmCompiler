@@ -70,7 +70,7 @@ ExtDefList:
     }
 ;
 
-ExtDef: 
+ExtDef:
     Specifier ExtDecList SEMI {
         $$ = make_yylval("ExtDef", @$.first_line, 3, $1, $2, $3);
     }

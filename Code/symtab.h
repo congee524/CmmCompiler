@@ -2,16 +2,31 @@
 #define SYMTAB_H__
 
 #define _POSIX_C_SOURCE 200809L
-#include "ptypes.h"
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#define INFO(msg)                                         \
+    do {                                                  \
+        fprintf(stderr, "info: %s:", __FILE__);           \
+        fprintf(stderr, "[%s] %d: ", __func__, __LINE__); \
+        fprintf(stderr, "%s\n", msg);                     \
+    } while (0)
+
+#define TODO()                                            \
+    do {                                                  \
+        fprintf(stderr, "unfinished at %s:", __FILE__);   \
+        fprintf(stderr, "[%s] %d: ", __func__, __LINE__); \
+        assert(0);                                        \
+    } while (0);
+
 typedef struct SymTable_* SymTable;
 typedef struct Type_* Type;
 typedef struct FieldList_* FieldList;
+typedef struct FuncTable_* FuncTable;
+typedef struct CompSTField_* CompSTFiled;
 
 typedef struct Node {
     int token;
@@ -35,6 +50,19 @@ struct SymTable_ {
 };
 
 extern SymTable symtable[0x3fff + 1];
+
+struct FuncTable_ {
+    char* name;
+    int lineno;
+    Type ret_type;
+    FieldList para;
+    int isDefined;
+    CompSTFiled compst;
+    FuncTable next;
+};
+
+/* use list instead of hash map, since we must check all the function whether been defined */
+extern FuncTable FuncHead;
 
 struct Type_ {
     enum { BASIC,
@@ -60,11 +88,21 @@ struct FieldList_ {
     FieldList next;
 };
 
+struct FieldSTACK_ {
+    int depth;
+    SymTable StructHead;
+    SymTable var_stack[256];
+};
+
+extern struct FieldSTACK_ fieldstack;
+
 void SemanticError(int error_num, int lineno, char* errtext);
 
 void SemanticAnalysis(Node* root);
 
 void ExtDefAnalysis(Node* root);
+
+void ExtDecListAnalysis(Node* root, Type type);
 
 Type SpecAnalysis(Node* spec);
 
@@ -74,6 +112,12 @@ char* TraceVarDec(Node* var_dec, int* dim, int* size);
 
 Type ConstArray(Type fund, int dim, int* size, int level);
 
-SymTable InsertSymTab(char* type_name, Type type);
+int InsertSymTab(char* type_name, Type type, int lineno);
+
+int CheckSymTab(char* type_name, Type type, int lineno);
+
+void CheckFuncDefined();
+
+void InitProg();
 
 #endif

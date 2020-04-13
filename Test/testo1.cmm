@@ -1,5 +1,16 @@
-int main()
-{
-    int i = 0123;
-    int j = 0x3F;
-}
+struct {
+    int a, b, a;
+};
+
+struct test1 {
+    float a = 2;
+    int b[2][5];
+};
+
+struct test1 {
+    float c;
+};
+
+int a, c;
+float test2;
+float test1;
