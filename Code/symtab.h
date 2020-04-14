@@ -133,6 +133,8 @@ FieldList VarListAnalysis(Node* var_list);
 
 FieldList ParamDecAnalysis(Node* param);
 
+FieldList ArgsAnalysis(Node* args);
+
 int AddSymTab(char* type_name, Type type, int lineno);
 
 int AddFuncTab(FuncTable func, int isDefined);

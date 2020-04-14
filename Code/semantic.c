@@ -201,6 +201,7 @@ void ExpAnalysis(Node* exp)
         break;
     }
     case 2: {
+        /* 2 nodes */
         Node *ope = exp->child[0], *obj = exp->child[1];
         ExpAnalysis(obj);
         if (!strcmp(ope->symbol, "MINUS")) {
@@ -225,6 +226,7 @@ void ExpAnalysis(Node* exp)
         break;
     }
     case 3: {
+        /* 3 nodes */
         if (!strcmp(exp->child[2]->symbol, "Exp")) {
             Node *obj1 = exp->child[0], *obj2 = exp->child[2], *ope = exp->child[1];
             ExpAnalysis(obj1);
@@ -351,12 +353,52 @@ void ExpAnalysis(Node* exp)
         break;
     }
     case 4: {
-        TODO()
+        if (!strcmp(exp->child[0], "ID")) {
+            ExpNode eval = exp->eval;
+            /* there is no pointer */
+            FieldList func_para = ArgsAnalysis(exp->child[2]);
+            eval->isRight = 1;
+            eval->type = CheckFuncCall(exp->child[0]->ident, func_para, exp->line);
+        } else if (!strcmp(exp->child[1], "Exp")) {
+            Node *obj = exp->child[0], *coord = exp->child[2];
+            ExpAnalysis(obj);
+            ExpAnalysis(coord);
+            memcpy(exp->eval, obj->eval, sizeof(struct ExpNode_));
+            Type temp_type = (Type)malloc(sizeof(struct Type_));
+            temp_type->kind = BASIC, temp_type->u.basic = 0;
+            if (!CheckTypeEql(coord->eval->type, temp_type)) {
+                SemanticError(12, coord->line, "NonInteger in array access operator");
+            }
+            temp_type->kind = ARRAY;
+            if (!CheckTypeEql(obj->eval->type, temp_type)) {
+                SemanticError(10, obj->line, "Apply array access operator on nonArray");
+            } else {
+                exp->eval->type = obj->eval->type->u.array.elem;
+                if (exp->eval->type->kind == BASIC) {
+                    exp->isRight = 1;
+                } else {
+                    exp->isRight = 0;
+                }
+            }
+            free(temp_type);
+        } else {
+            assert(0);
+        }
         break;
     }
     default:
         assert(0);
     }
+}
+
+FieldList ArgsAnalysis(Node* args)
+{
+    /* cannot get the values of parameters */
+    FieldList ret = (FieldList)malloc(sizeof(struct FieldList_));
+    ExpAnalysis(args->child[0]);
+    ret->type = args->child[0]->eval->type;
+    ret->next = ArgsAnalysis(args->child[2]);
+    return ret;
 }
 
 Type CheckFuncCall(char* func_name, FieldList para, int lineno)
@@ -376,9 +418,15 @@ Type CheckFuncCall(char* func_name, FieldList para, int lineno)
         }
     }
     if (ret == NULL) {
-        char msg[128];
-        sprintf(msg, "Call undefined function \"%s\"", func_name);
-        SemanticError(2, lineno, msg);
+        if (LookupTab(func_name) == NULL) {
+            char msg[128];
+            sprintf(msg, "Call undefined function \"%s\"", func_name);
+            SemanticError(2, lineno, msg);
+        } else {
+            char msg[128];
+            sprintf(msg, "Apply Call operation on variable \"%s\"", func_name);
+            SemanticError(11, lineno, msg);
+        }
     }
     return ret;
 }
