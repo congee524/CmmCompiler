@@ -60,6 +60,21 @@ _SINGLE_COMMENT     ("//"[^\n]*)
 
 {_RELOP}            {
     init_yylval("RELOP");
+    if (!strcmp(yytext, "!=")) {
+        yylval->ival = 5;
+    } else if (!strcmp(yytext, "==")) {
+        yylval->ival = 4;
+    } else if (!strcmp(yytext, "<=")) {
+        yylval->ival = 3;
+    } else if (!strcmp(yytext, ">=")) {
+        yylval->ival = 2;
+    } else if (!strcmp(yytext, "<")) {
+        yylval->ival = 1;
+    } else if (!strcmp(yytext, ">")) {
+        yylval->ival = 0;
+    } else {
+        assert(0);
+    }
     return TOKEN(RELOP); 
 }
 "int"|"float"       {

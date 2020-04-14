@@ -80,7 +80,7 @@ void CompSTAnalysis(Node* root, FuncTable func)
     /* analyze the compst [return_type, definition, exp etc.] */
     /* stack */
     CreateLocalVar();
-
+    TODO()
     DeleteLocalVar();
 }
 
@@ -215,15 +215,9 @@ void ExpAnalysis(Node* exp)
                 eval->val = -(obj->eval->val);
             }
         } else if (!strcmp(ope->symbol, "NOT")) {
-            ExpNode eval = exp->eval;
-            eval->isRight = obj->eval->isRight;
-            eval->type = obj->eval->type;
-            if (eval->type->kind != BASIC || eval->type->u.basic != 0) {
-                char msg[128];
-                sprintf(msg, "Wrong operand object type");
-                SemanticError(7, obj->line, msg);
-            } else {
-                eval->val = ~(obj->eval->val);
+            memcpy(exp->eval, obj->eval, sizeof(struct ExpNode_));
+            if (CheckLogicOPE(obj)) {
+                exp->eval->val = !((int)obj->eval->val);
             }
         } else {
             assert(0);
@@ -249,19 +243,71 @@ void ExpAnalysis(Node* exp)
                 }
                 memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
             } else if (!strcmp(ope->symbol, "AND")) {
-                TODO()
+                memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
+                if (CheckLogicOPE(obj1) && CheckLogicOPE(obj2)) {
+                    exp->eval->isRight = 1;
+                    exp->eval->val = (int)obj1->eval->val && (int)obj2->eval->val;
+                    exp->eval->type = obj1->type;
+                }
             } else if (!strcmp(ope->symbol, "OR")) {
-                TODO()
+                memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
+                if (CheckLogicOPE(obj1) && CheckLogicOPE(obj2)) {
+                    exp->eval->isRight = 1;
+                    exp->eval->val = (int)obj1->eval->val || (int)obj2->eval->val;
+                    exp->eval->type = obj1->type;
+                }
             } else if (!strcmp(ope->symbol, "RELOP")) {
-                TODO()
+                memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
+                if (CheckLogicOPE(obj1) && CheckLogicOPE(obj2)) {
+                    exp->eval->isRight = 1;
+                    switch (ope->ival) {
+                    case 0:
+                        exp->eval->val = (int)obj1->eval->val > (int)obj2->eval->val;
+                        break;
+                    case 1:
+                        exp->eval->val = (int)obj1->eval->val < (int)obj2->eval->val;
+                        break;
+                    case 2:
+                        exp->eval->val = (int)obj1->eval->val >= (int)obj2->eval->val;
+                        break;
+                    case 3:
+                        exp->eval->val = (int)obj1->eval->val <= (int)obj2->eval->val;
+                        break;
+                    case 4:
+                        exp->eval->val = (int)obj1->eval->val == (int)obj2->eval->val;
+                        break;
+                    case 5:
+                        exp->eval->val = (int)obj1->eval->val != (int)obj2->eval->val;
+                        break;
+                    default:
+                        assert(0);
+                    }
+                    exp->eval->type = obj1->type;
+                }
             } else if (!strcmp(ope->symbol, "PLUS")) {
-                TODO()
+                memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
+                if (CheckArithOPE(obj1, obj2)) {
+                    exp->isRight = 1;
+                    exp->eval->val = obj1->eval->val + obj2->eval->val;
+                }
             } else if (!strcmp(ope->symbol, "MINUS")) {
-                TODO()
+                memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
+                if (CheckArithOPE(obj1, obj2)) {
+                    exp->isRight = 1;
+                    exp->eval->val = obj1->eval->val - obj2->eval->val;
+                }
             } else if (!strcmp(ope->symbol, "STAR")) {
-                TODO()
+                memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
+                if (CheckArithOPE(obj1, obj2)) {
+                    exp->isRight = 1;
+                    exp->eval->val = obj1->eval->val * obj2->eval->val;
+                }
             } else if (!strcmp(ope->symbol, "DIV")) {
-                TODO()
+                memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
+                if (CheckArithOPE(obj1, obj2)) {
+                    exp->isRight = 1;
+                    exp->eval->val = obj1->eval->val / obj2->eval->val;
+                }
             } else {
                 assert(0);
             }
@@ -302,7 +348,10 @@ void ExpAnalysis(Node* exp)
                 assert(0);
             }
         }
-
+        break;
+    }
+    case 4: {
+        TODO()
         break;
     }
     default:
@@ -345,6 +394,26 @@ Type CheckStructField(FieldList structure, char* name)
         }
     }
     return ret;
+}
+
+int CheckLogicOPE(Node* exp)
+{
+    assert(strcmp(exp->symbol, "Exp") == 0);
+    if (exp->eval->type->kind != BASIC || exp->eval->type->u.basic != 0) {
+        SemanticError(7, exp->line, "Wrong operand object type");
+        return 0;
+    }
+    return 1;
+}
+
+int CheckArithOPE(Node* obj1, Node* obj2)
+{
+    assert(strcmp(obj1->symbol, "Exp") == 0 && strcmp(obj2->symbol, "Exp") == 0);
+    if (obj1->eval->type->kind == BASIC && CheckTypeEql(obj1->eval->type, obj2->eval->type)) {
+        return 1;
+    }
+    SemanticError(7, obj1->line, "Wrong operand object type");
+    return 0;
 }
 
 Type SpecAnalysis(Node* spec)

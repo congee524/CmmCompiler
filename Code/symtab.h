@@ -151,6 +151,10 @@ int CheckFieldEql(FieldList f1, FieldList f2);
 
 Type CheckFuncCall(char* func_name, FieldList para, int lineno);
 
+int CheckLogicOPE(Node* exp);
+
+int CheckArithOPE(Node* obj1, Node* obj2);
+
 void InitProg();
 
 #endif
