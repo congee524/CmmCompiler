@@ -79,9 +79,8 @@ void CompSTAnalysis(Node* root, FuncTable func)
 {
     /* analyze the compst [return_type, definition, exp etc.] */
     /* stack */
-    symtabstack.var_stack[symtabstack.depth++] = (SymTable)malloc(sizeof(struct SymTable_));
+    CreateLocalVar();
 
-    
     DeleteLocalVar();
 }
 
@@ -155,7 +154,7 @@ void ExtDecListAnalysis(Node* root, Type type)
     char* name = TraceVarDec(root->child[0], &dim, size);
 
     new_var = ConstArray(type, dim, size, 0);
-    InsertSymTab(name, new_var, root->line);
+    AddSymTab(name, new_var, root->line);
 }
 
 Type SpecAnalysis(Node* spec)
@@ -321,7 +320,7 @@ Type StructSpecAnalysis(Node* struct_spec)
             }
         }
         /* define struct, need to add to symtab */
-        InsertSymTab(struct_name, ret, def_list->line);
+        AddSymTab(struct_name, ret, def_list->line);
     } else {
         assert(0);
     }
@@ -363,7 +362,7 @@ Type ConstArray(Type fund, int dim, int* size, int level)
     return ret;
 }
 
-int InsertSymTab(char* type_name, Type type, int lineno)
+int AddSymTab(char* type_name, Type type, int lineno)
 {
     /*
         symtab store the global variables and structure
@@ -377,6 +376,26 @@ int InsertSymTab(char* type_name, Type type, int lineno)
         new_sym->type = type;
         new_sym->next = symtable[idx];
         symtable[idx] = new_sym;
+        if (type->kind == STRUCTURE) {
+            SymTableNode temp = symtabstack.StructHead;
+            while (temp->next != NULL) {
+                temp = temp->next;
+            }
+            temp->next = (SymTableNode)malloc(sizeof(struct SymTableNode_));
+            temp = temp->next;
+            temp->var = new_sym;
+            temp->next = NULL;
+        } else if (symtabstack.depth > 0) {
+            /* add to local var list */
+            SymTableNode temp = symtabstack.var_stack[symtabstack.depth - 1];
+            while (temp->next) {
+                temp = temp->next;
+            }
+            temp->next = (SymTableNode)malloc(sizeof(struct SymTableNode_));
+            temp = temp->next;
+            temp->var = new_sym;
+            temp->next = NULL;
+        }
         return 1;
     }
     return 0;
@@ -403,31 +422,48 @@ int AddFuncTab(FuncTable func, int isDefined)
     return 0;
 }
 
+void CreateLocalVar()
+{
+    symtabstack.var_stack[symtabstack.depth++] = (SymTableNode)malloc(sizeof(struct SymTableNode_));
+    symtabstack.var_stack[symtabstack.depth - 1]->var = NULL;
+    symtabstack.var_stack[symtabstack.depth - 1]->next = NULL;
+}
+
 void DeleteLocalVar()
 {
     assert(symtabstack.depth > 0);
-    SymTable temp = symtabstack.var_stack[symtabstack.depth - 1];
-    SymTable to_del;
+    SymTableNode temp = symtabstack.var_stack[symtabstack.depth - 1];
     unsigned int idx;
     while (temp->next) {
         temp = temp->next;
-        idx = hash(temp->name);
-        to_del = symtable[idx];
-        while (strcmp(to_del->name, temp->name) != 0) {
+        idx = hash(temp->var->name);
+        SymTable to_del = symtable[idx], last = NULL;
+        while (to_del && strcmp(to_del->name, temp->var->name) != 0) {
+            last = to_del;
             to_del = to_del->next;
         }
         assert(to_del != NULL);
-        symtable[idx] = to_del->next;
+        if (last == NULL) {
+            symtable[idx] = to_del->next;
+        } else {
+            last->next = to_del->next;
+        }
     }
 
     temp = symtabstack.var_stack[symtabstack.depth - 1];
+    SymTableNode to_del;
     while (temp->next) {
         to_del = temp;
         temp = temp->next;
+        free(to_del->val);
         free(to_del);
     }
+    free(temp->var);
     free(temp);
-    symtabstack.var_stack[--symtabstack.depth] = NULL;
+    if (symtabstack.var_stack[symtabstack.depth - 1] != NULL) {
+        free(symtabstack.var_stack[symtabstack.depth - 1]);
+        symtabstack.var_stack[--symtabstack.depth] = NULL;
+    }
 }
 
 int CheckSymTab(char* type_name, Type type, int lineno)
@@ -446,10 +482,10 @@ int CheckSymTab(char* type_name, Type type, int lineno)
             }
         }
     } else {
-        SymTable temp = symtabstack.StructHead;
+        SymTableNode temp = symtabstack.StructHead;
         while (temp->next) {
             temp = temp->next;
-            if (!strcmp(temp->name, type_name)) {
+            if (!strcmp(temp->var->name, type_name)) {
                 ret = 0;
                 break;
             }
@@ -458,7 +494,7 @@ int CheckSymTab(char* type_name, Type type, int lineno)
             temp = symtabstack.var_stack[symtabstack.depth - 1];
             while (temp->next) {
                 temp = temp->next;
-                if (!strcmp(temp->name, type_name)) {
+                if (!strcmp(temp->var->name, type_name)) {
                     ret = 0;
                     break;
                 }
@@ -567,16 +603,22 @@ void InitProg()
 
     symtabstack.depth = 0;
     if (symtabstack.StructHead) {
-        SymTable temp = symtabstack.StructHead;
-        SymTable to_del;
+        SymTableNode temp = symtabstack.StructHead;
+        SymTableNode to_del;
         while (temp->next) {
             to_del = temp;
             temp = temp->next;
+            free(to_del->var);
             free(to_del);
         }
+        free(temp->var);
         free(temp);
+        if (symtabstack.StructHead != NULL) {
+            free(symtabstack.StructHead);
+        }
     }
-    symtabstack.StructHead = (SymTable)malloc(sizeof(struct SymTable_));
+    symtabstack.StructHead = (SymTableNode)malloc(sizeof(struct SymTableNode_));
+    symtabstack.StructHead->var = NULL;
     symtabstack.StructHead->next = NULL;
 }
 

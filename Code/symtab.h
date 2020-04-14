@@ -26,6 +26,7 @@ typedef struct SymTable_* SymTable;
 typedef struct Type_* Type;
 typedef struct FieldList_* FieldList;
 typedef struct FuncTable_* FuncTable;
+typedef struct SymTableNode_* SymTableNode;
 
 typedef struct Node {
     int token;
@@ -82,10 +83,15 @@ struct FieldList_ {
     FieldList next;
 };
 
+struct SymTableNode_ {
+    SymTable var;
+    SymTableNode next;
+};
+
 struct SymTabStack_ {
     int depth;
-    SymTable StructHead;
-    SymTable var_stack[256];
+    SymTableNode StructHead;
+    SymTableNode var_stack[256];
 };
 
 extern struct SymTabStack_ symtabstack;
@@ -112,7 +118,7 @@ FieldList VarListAnalysis(Node* var_list);
 
 FieldList ParamDecAnalysis(Node* param);
 
-int InsertSymTab(char* type_name, Type type, int lineno);
+int AddSymTab(char* type_name, Type type, int lineno);
 
 int AddFuncTab(FuncTable func, int isDefined);
 
