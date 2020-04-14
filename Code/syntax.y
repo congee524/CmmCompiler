@@ -272,6 +272,7 @@ Dec:
 
 // Expressions
 Exp:
+    /* 3 nodes */
     Exp ASSIGNOP Exp {
         $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3);
     }
@@ -296,51 +297,51 @@ Exp:
 |   Exp DIV Exp {
         $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3);
     }
+|   Exp DOT ID {
+        $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3);
+    }
 |   LP Exp RP {
         $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3);
     }
-|   LP error RP{ 
-        $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3); 
-        yyerrok; errors++;
+|   ID LP RP {
+        $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3);
     }
+    /* 4 nodes */
+|   ID LP Args RP {
+        $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4);
+    }
+|   Exp LB Exp RB {
+        $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4);
+    }
+    /* 2 nodes */
 |   MINUS Exp %prec NEG {
         $$ = make_yylval("Exp", @$.first_line, 2, $1, $2);
     }
 |   NOT Exp {
         $$ = make_yylval("Exp", @$.first_line, 2, $1, $2);
     }
-|   ID LP Args RP {
-        $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4);
+    /* 1 nodes */
+|   ID {
+        $$ = make_yylval("Exp", @$.first_line, 1, $1);
     }
-|   ID LP error RP { 
-        $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4);
+|   INT {
+        $$ = make_yylval("Exp", @$.first_line, 1, $1);
+    }
+|   FLOAT {
+        $$ = make_yylval("Exp", @$.first_line, 1, $1);
+    }
+    /* error production */
+|   LP error RP{ 
+        $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3); 
         yyerrok; errors++;
-    }
-|   ID LP RP {
-        $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3);
-    }
-|   Exp LB Exp RB {
-        $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4);
     }
 |   Exp LB error RB {
         $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4); 
         yyerrok; errors++;
     }
-|   Exp DOT ID {
-        $$ = make_yylval("Exp", @$.first_line, 3, $1, $2, $3);
-    }
-|   ID {
-        $$ = make_yylval("Exp", @$.first_line, 1, $1); 
-        $$->ident = $1->ident;
-        // TODO() ALL OF ABOVE
-    }
-|   INT {
-        $$ = make_yylval("Exp", @$.first_line, 1, $1);
-        $$->dval = (double)$1->ival;
-    }
-|   FLOAT {
-        $$ = make_yylval("Exp", @$.first_line, 1, $1);
-        $$->dval = (double)$1->fval;
+|   ID LP error RP { 
+        $$ = make_yylval("Exp", @$.first_line, 4, $1, $2, $3, $4);
+        yyerrok; errors++;
     }
 ;
 

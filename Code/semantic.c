@@ -157,6 +157,193 @@ void ExtDecListAnalysis(Node* root, Type type)
     AddSymTab(name, new_var, root->line);
 }
 
+void ExpAnalysis(Node* exp)
+{
+    assert(strcmp(exp->symbol, "Exp") == 0);
+    if (exp->eval != NULL) {
+        /* the analysis has completed */
+        return;
+    }
+
+    switch (exp->n_child) {
+    case 1: {
+        /* 1 nodes */
+        Node* obj = exp->child[0];
+        if (!strcmp(obj->symbol, "ID")) {
+            /* variable */
+            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
+            ExpNode eval = exp->eval;
+            eval->isRight = 0;
+            eval->type = LookupTab(obj->ident);
+            if (eval->type == NULL) {
+                char msg[128];
+                sprintf(msg, "Variable \"%s\" has not been defined", obj->ident);
+                SemanticError(1, obj->line, msg);
+            }
+        } else if (!strcmp(obj->symbol, "INT")) {
+            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
+            ExpNode eval = exp->eval;
+            eval->isRight = 1;
+            eval->val = obj->ival;
+            eval->type = (Type)malloc(sizeof(struct Type_));
+            eval->type->kind = BASIC;
+            eval->type->u.basic = 0;
+        } else if (!strcmp(obj->symbol, "FLOAT")) {
+            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
+            ExpNode eval = exp->eval;
+            eval->isRight = 1;
+            eval->val = obj->fval;
+            eval->type = (Type)malloc(sizeof(struct Type_));
+            eval->type->kind = BASIC;
+            eval->type->u.basic = 1;
+        } else {
+            assert(0);
+        }
+        break;
+    }
+    case 2: {
+        Node* ope = exp->child[0];
+        Node* obj = exp->child[1];
+        ExpAnalysis(obj);
+        if (!strcmp(ope->symbol, "MINUS")) {
+            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
+            ExpNode eval = exp->eval;
+            eval->isRight = obj->eval->isRight;
+            eval->type = obj->eval->type;
+            if (eval->type->kind != BASIC) {
+                char msg[128];
+                sprintf(msg, "Wrong operand object type");
+                SemanticError(7, obj->line, msg);
+            } else {
+                eval->val = -(obj->eval->val);
+            }
+        } else if (!strcmp(ope->symbol, "NOT")) {
+            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
+            ExpNode eval = exp->eval;
+            eval->isRight = obj->eval->isRight;
+            eval->type = obj->eval->type;
+            if (eval->type->kind != BASIC || eval->type->u.basic != 0) {
+                char msg[128];
+                sprintf(msg, "Wrong operand object type");
+                SemanticError(7, obj->line, msg);
+            } else {
+                eval->val = ~(obj->eval->val);
+            }
+        } else {
+            assert(0);
+        }
+        break;
+    }
+    case 3: {
+        if (!strcmp(exp->child[2]->symbol, "Exp")) {
+            Node *obj1 = exp->child[0], *obj2 = exp->child[2], *ope = exp->child[1];
+            ExpAnalysis(obj1);
+            ExpAnalysis(obj2);
+            if (!strcmp(ope->symbol, "ASSIGNOP")) {
+
+                TODO()
+            } else if (!strcmp(ope->symbol, "AND")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "OR")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "RELOP")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "PLUS")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "MINUS")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "STAR")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "DIV")) {
+                TODO()
+            } else {
+                assert(0);
+            }
+        } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
+            /* Exp DOT ID : structure */
+            Node *obj1 = exp->child[0], *obj2 = exp->child[2];
+            ExpAnalysis(obj1);
+            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
+            memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
+            if (obj1->eval->type->kind != STRUCTURE) {
+                char msg[128];
+                sprintf(msg, "Apply DOT operand on nonstructure variable");
+                SemanticError(13, exp->child[0]->line, msg);
+            } else {
+                Type exp_type = CheckStructField(obj1->eval->type->u.structure, obj2->ident);
+                if (exp_type == NULL) {
+                    char msg[128];
+                    sprintf(msg, "Access the undefined field \"%s\" in structure", obj2->ident);
+                    SemanticError(14, exp->child[0]->line, msg);
+                } else {
+                    /* access field succeed */
+                    exp->eval->isRight = 1;
+                    exp->eval->type = exp_type;
+                }
+            }
+        } else {
+            /* ID LP RP | LP EXP RP */
+            if (!strcmp(exp->child[0]->symbol, "LP")) {
+                /* LP EXP RP */
+                ExpAnalysis(exp->child[1]);
+                exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
+                memcpy(exp->eval, exp->child[1]->eval, sizeof(struct ExpNode_));
+            } else if (!strcmp(exp->child[0]->symbol, "ID")) {
+                /* ID LP RP  function */
+                exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
+                ExpNode eval = exp->eval;
+                /* there is no pointer */
+                eval->isRight = 1;
+                eval->type = CheckFuncCall(exp->child[0]->ident, NULL, exp->line);
+            } else {
+                assert(0);
+            }
+        }
+
+        break;
+    }
+    default:
+        assert(0);
+    }
+}
+
+Type CheckFuncCall(char* func_name, FieldList para, int lineno)
+{
+    Type ret = NULL;
+    FuncTable temp = FuncHead;
+    while (temp->next) {
+        temp->next;
+        if (!strcmp(func_name, temp->name)) {
+            ret = ret_type;
+            if (!CheckFieldEql(para, temp->para)) {
+                char msg[128];
+                sprintf(msg, "Mismatched parameters on calling function \"%s\"", func_name);
+                SemanticError(9, lineno, msg);
+            }
+            break;
+        }
+    }
+    if (ret == NULL) {
+        char msg[128];
+        sprintf(msg, "Call undefined function \"%s\"", func_name);
+        SemanticError(2, lineno, msg);
+    }
+    return ret;
+}
+
+Type CheckStructField(FieldList structure, char* name)
+{
+    Type ret = ret;
+    FieldList temp = structure;
+    while (temp) {
+        if (!strcmp(temp->name, name)) {
+            ret = temp->type;
+            break;
+        }
+    }
+    return ret;
+}
+
 Type SpecAnalysis(Node* spec)
 {
     assert(spec != NULL);
@@ -422,6 +609,22 @@ int AddFuncTab(FuncTable func, int isDefined)
     return 0;
 }
 
+Type LookupTab(char* name)
+{
+    /* if find symbol failed, return NULL */
+    Type ret = NULL;
+    unsigned int idx = hash(name);
+    SymTable temp = symtable[idx];
+    while (temp) {
+        if (!strcmp(temp->name, name)) {
+            ret = temp->type;
+            break;
+        }
+        temp = temp->next;
+    }
+    return ret;
+}
+
 void CreateLocalVar()
 {
     symtabstack.var_stack[symtabstack.depth++] = (SymTableNode)malloc(sizeof(struct SymTableNode_));
@@ -545,7 +748,10 @@ int CheckFuncTab(FuncTable func, int isDefined)
 
 int CheckTypeEql(Type t1, Type t2)
 {
-    assert(t1 != NULL && t2 != NULL);
+    if ((t1 == NULL && t2 != NULL) || (t1 != NULL && t2 == NULL)) {
+        INFO("NULL type");
+        return 0;
+    }
     if (t1->kind != t2->kind) {
         return 0;
     }

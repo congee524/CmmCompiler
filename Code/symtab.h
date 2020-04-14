@@ -8,12 +8,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG
+
+#ifdef DEBUG
 #define INFO(msg)                                         \
     do {                                                  \
         fprintf(stderr, "info: %s:", __FILE__);           \
         fprintf(stderr, "[%s] %d: ", __func__, __LINE__); \
         fprintf(stderr, "%s\n", msg);                     \
     } while (0)
+#else
+#define INFO(msg) \
+    do {          \
+    } while (0)
+#endif
 
 #define TODO()                                            \
     do {                                                  \
@@ -22,11 +30,18 @@
         assert(0);                                        \
     } while (0);
 
+typedef struct ExpNode_* ExpNode;
 typedef struct SymTable_* SymTable;
 typedef struct Type_* Type;
 typedef struct FieldList_* FieldList;
 typedef struct FuncTable_* FuncTable;
 typedef struct SymTableNode_* SymTableNode;
+
+struct ExpNode_ {
+    int isRight;
+    double val;
+    Type type;
+};
 
 typedef struct Node {
     int token;
@@ -37,8 +52,8 @@ typedef struct Node {
     union {
         int ival;
         float fval;
-        double dval;
         char* ident;
+        ExpNode eval;
     };
 } Node;
 
@@ -126,11 +141,15 @@ int CheckSymTab(char* type_name, Type type, int lineno);
 
 int CheckFuncTab(FuncTable func, int isDefined);
 
+int CheckStructField(FieldList structure, char* name);
+
 void CheckFuncDefined();
 
 int CheckTypeEql(Type t1, Type t2);
 
 int CheckFieldEql(FieldList f1, FieldList f2);
+
+Type CheckFuncCall(char* func_name, FieldList para, int lineno);
 
 void InitProg();
 
