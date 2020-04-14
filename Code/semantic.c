@@ -165,13 +165,14 @@ void ExpAnalysis(Node* exp)
         return;
     }
 
+    exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
+
     switch (exp->n_child) {
     case 1: {
         /* 1 nodes */
         Node* obj = exp->child[0];
         if (!strcmp(obj->symbol, "ID")) {
             /* variable */
-            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
             ExpNode eval = exp->eval;
             eval->isRight = 0;
             eval->type = LookupTab(obj->ident);
@@ -181,7 +182,6 @@ void ExpAnalysis(Node* exp)
                 SemanticError(1, obj->line, msg);
             }
         } else if (!strcmp(obj->symbol, "INT")) {
-            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
             ExpNode eval = exp->eval;
             eval->isRight = 1;
             eval->val = obj->ival;
@@ -189,7 +189,6 @@ void ExpAnalysis(Node* exp)
             eval->type->kind = BASIC;
             eval->type->u.basic = 0;
         } else if (!strcmp(obj->symbol, "FLOAT")) {
-            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
             ExpNode eval = exp->eval;
             eval->isRight = 1;
             eval->val = obj->fval;
@@ -202,11 +201,9 @@ void ExpAnalysis(Node* exp)
         break;
     }
     case 2: {
-        Node* ope = exp->child[0];
-        Node* obj = exp->child[1];
+        Node *ope = exp->child[0], *obj = exp->child[1];
         ExpAnalysis(obj);
         if (!strcmp(ope->symbol, "MINUS")) {
-            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
             ExpNode eval = exp->eval;
             eval->isRight = obj->eval->isRight;
             eval->type = obj->eval->type;
@@ -218,7 +215,6 @@ void ExpAnalysis(Node* exp)
                 eval->val = -(obj->eval->val);
             }
         } else if (!strcmp(ope->symbol, "NOT")) {
-            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
             ExpNode eval = exp->eval;
             eval->isRight = obj->eval->isRight;
             eval->type = obj->eval->type;
@@ -240,8 +236,18 @@ void ExpAnalysis(Node* exp)
             ExpAnalysis(obj1);
             ExpAnalysis(obj2);
             if (!strcmp(ope->symbol, "ASSIGNOP")) {
-
-                TODO()
+                if (obj1->eval->isRight == 1) {
+                    char msg[128];
+                    sprintf(msg, "Assign to left value");
+                    SemanticError(6, obj1->line, msg);
+                } else {
+                    if (!CheckTypeEql(obj1->eval->type, obj2->eval->type)) {
+                        char msg[128];
+                        sprintf(msg, "Mismatched types on the sides of the assignment");
+                        SemanticError(5, ope->line, msg);
+                    }
+                }
+                memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
             } else if (!strcmp(ope->symbol, "AND")) {
                 TODO()
             } else if (!strcmp(ope->symbol, "OR")) {
@@ -263,7 +269,6 @@ void ExpAnalysis(Node* exp)
             /* Exp DOT ID : structure */
             Node *obj1 = exp->child[0], *obj2 = exp->child[2];
             ExpAnalysis(obj1);
-            exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
             memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
             if (obj1->eval->type->kind != STRUCTURE) {
                 char msg[128];
@@ -286,11 +291,9 @@ void ExpAnalysis(Node* exp)
             if (!strcmp(exp->child[0]->symbol, "LP")) {
                 /* LP EXP RP */
                 ExpAnalysis(exp->child[1]);
-                exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
                 memcpy(exp->eval, exp->child[1]->eval, sizeof(struct ExpNode_));
             } else if (!strcmp(exp->child[0]->symbol, "ID")) {
                 /* ID LP RP  function */
-                exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
                 ExpNode eval = exp->eval;
                 /* there is no pointer */
                 eval->isRight = 1;
