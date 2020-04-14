@@ -80,8 +80,38 @@ void CompSTAnalysis(Node* root, FuncTable func)
     /* analyze the compst [return_type, definition, exp etc.] */
     /* stack */
     CreateLocalVar();
+    /* allowing the initialization problem */
+    Node* def_list = root->child[1];
+    DefListAnalysis(def_list, func);
     TODO()
     DeleteLocalVar();
+}
+
+void DefListAnalysis(Node* def_list, FuncTable func)
+{
+    if (def_list->n_child == 2) {
+        DefAnalysis(def_list->child[0], func);
+        DefListAnalysis(def_list->child[1], func);
+    }
+}
+
+void DefAnalysis(Node* def, FuncTable func)
+{
+    Type fund_type = SpecAnalysis(def->child[0]);
+    DecListAnalysis(def->child[1], fund_type, func);
+}
+
+void DecListAnalysis(Node* root, Type type, FuncTable func)
+{
+    Node* dec = root->child[0];
+    Node* var_dec = dec->child[0];
+    int dim = 0, size[256];
+    char* name = TraceVarDec(var_dec, &dim, size);
+    TODO()
+    if (LookupTab())
+        if (root->n_child == 3) {
+            DecListAnalysis(root->child[2], type, func);
+        }
 }
 
 FuncTable FunDecAnalysis(Node* root, Type type)

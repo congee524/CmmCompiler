@@ -64,8 +64,6 @@ struct SymTable_ {
     SymTable next;
 };
 
-extern SymTable symtable[0x3fff + 1];
-
 struct FuncTable_ {
     char* name;
     int lineno;
@@ -76,7 +74,6 @@ struct FuncTable_ {
 };
 
 /* use list instead of hash map, since we must check all the function whether been defined */
-extern FuncTable FuncHead;
 
 struct Type_ {
     enum { BASIC,
@@ -109,6 +106,8 @@ struct SymTabStack_ {
     SymTableNode var_stack[256];
 };
 
+extern SymTable symtable[0x3fff + 1];
+extern FuncTable FuncHead;
 extern struct SymTabStack_ symtabstack;
 
 void SemanticError(int error_num, int lineno, char* errtext);
