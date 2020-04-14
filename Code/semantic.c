@@ -2,7 +2,7 @@
 
 SymTable symtable[0x3fff + 1];
 FuncTable FuncHead;
-struct FieldSTACK_ fieldstack;
+struct SymTabStack_ symtabstack;
 
 void SemanticError(int error_num, int lineno, char* errtext)
 {
@@ -56,16 +56,33 @@ void ExtDefAnalysis(Node* root)
          */
         return;
     } else if (!strcmp(tmp->symbol, "FunDec")) {
+        FuncTable func = FunDecAnalysis(tmp, type);
         if (!strcmp(root->child[2]->symbol, "CompSt")) {
+            /* function definition */
+            AddFuncTab(func, 1);
+            /*  analyze the CompSt
+                return_type;
+             */
             TODO()
         } else if (!strcmp(root->child[2]->symbol, "SEMI")) {
-            TODO()
+            /* function declarion */
+            AddFuncTab(func, 0);
         } else {
             assert(0);
         }
     } else {
         assert(0);
     }
+}
+
+void CompSTAnalysis(Node* root, FuncTable func)
+{
+    /* analyze the compst [return_type, definition, exp etc.] */
+    /* stack */
+    symtabstack.var_stack[symtabstack.depth++] = (SymTable)malloc(sizeof(struct SymTable_));
+
+    
+    DeleteLocalVar();
 }
 
 FuncTable FunDecAnalysis(Node* root, Type type)
@@ -83,11 +100,38 @@ FuncTable FunDecAnalysis(Node* root, Type type)
     if (root->n_child == 3) {
         ret->para = NULL;
     } else if (root->n_child == 4) {
-        TODO()
+        ret->para = VarListAnalysis(root->child[2]);
     } else {
         assert(0);
     }
 
+    return ret;
+}
+
+FieldList VarListAnalysis(Node* var_list)
+{
+    /* get the parameter list of a function */
+    FieldList ret = ParamDecAnalysis(var_list->child[0]);
+
+    if (var_list->n_child == 3) {
+        ret->next = VarListAnalysis(var_list->child[2]);
+    }
+    return ret;
+}
+
+FieldList ParamDecAnalysis(Node* param)
+{
+    assert(param->n_child == 2);
+    FieldList ret = malloc(sizeof(struct FieldList_));
+
+    Type basic_type = SpecAnalysis(param->child[0]);
+    int dim = 0, size[256];
+    char* para_name = TraceVarDec(param->child[1], &dim, size);
+    Type para_type = ConstArray(basic_type, dim, size, 0);
+
+    ret->name = strdup(para_name);
+    ret->type = para_type;
+    ret->next = NULL;
     return ret;
 }
 
@@ -338,10 +382,31 @@ int InsertSymTab(char* type_name, Type type, int lineno)
     return 0;
 }
 
+int AddFuncTab(FuncTable func, int isDefined)
+{
+    if (CheckFuncTab(func, isDefined)) {
+        /* there is not conflict */
+        FuncTable_ temp = FuncHead;
+        while (temp->next) {
+            temp = temp->next;
+            if (!strcmp(func->name, temp->name)) {
+                /* function declaration */
+                assert(func->isDefined == 0);
+                func->isDefined = isDefined;
+                return 1;
+            }
+        }
+        /* add the new function to the function list */
+        temp->next = func;
+        return 1;
+    }
+    return 0;
+}
+
 void DeleteLocalVar()
 {
-    assert(fieldstack.depth > 0);
-    SymTable temp = fieldstack.var_stack[fieldstack.depth - 1];
+    assert(symtabstack.depth > 0);
+    SymTable temp = symtabstack.var_stack[symtabstack.depth - 1];
     SymTable to_del;
     unsigned int idx;
     while (temp->next) {
@@ -355,21 +420,21 @@ void DeleteLocalVar()
         symtable[idx] = to_del->next;
     }
 
-    temp = fieldstack.var_stack[fieldstack.depth - 1];
+    temp = symtabstack.var_stack[symtabstack.depth - 1];
     while (temp->next) {
         to_del = temp;
         temp = temp->next;
         free(to_del);
     }
     free(temp);
-    fieldstack.var_stack[--fieldstack.depth] = NULL;
+    symtabstack.var_stack[--symtabstack.depth] = NULL;
 }
 
 int CheckSymTab(char* type_name, Type type, int lineno)
 {
     int ret = 1;
     unsigned int idx = hash(type_name);
-    if (fieldstack.depth == 0) {
+    if (symtabstack.depth == 0) {
         if (symtable[idx] != NULL) {
             SymTable temp = symtable[idx];
             while (temp) {
@@ -381,7 +446,7 @@ int CheckSymTab(char* type_name, Type type, int lineno)
             }
         }
     } else {
-        SymTable temp = fieldstack.StructHead;
+        SymTable temp = symtabstack.StructHead;
         while (temp->next) {
             temp = temp->next;
             if (!strcmp(temp->name, type_name)) {
@@ -390,7 +455,7 @@ int CheckSymTab(char* type_name, Type type, int lineno)
             }
         }
         if (ret) {
-            temp = fieldstack.var_stack[fieldstack.depth - 1];
+            temp = symtabstack.var_stack[symtabstack.depth - 1];
             while (temp->next) {
                 temp = temp->next;
                 if (!strcmp(temp->name, type_name)) {
@@ -413,6 +478,62 @@ int CheckSymTab(char* type_name, Type type, int lineno)
         SemanticError(err_id, lineno, msg);
     }
     return ret;
+}
+
+int CheckFuncTab(FuncTable func, int isDefined)
+{
+    int ret = 1;
+    FuncTable temp = FuncHead;
+    while (temp->next) {
+        temp = temp->next;
+        if (!strcmp(func->name, temp->name)) {
+            if (isDefined & temp->isDefined) {
+                /* has been defined */
+                char msg[128];
+                sprintf(msg, "Multiple defined function \"%s\"", func->name);
+                SemanticError(4, func->lineno, msg);
+                ret = 0;
+            }
+            /* check the param and return type */
+            if (!CheckTypeEql(func->ret_type, temp->ret_type) || !CheckFieldEql(func->para, temp->para)) {
+                char msg[128];
+                sprintf(msg, "Conflicting function definitions or declarations at function \"%s\"", func->name);
+                SemanticError(19, func->lineno, msg);
+                ret = 0;
+            }
+            break;
+        }
+    }
+    return ret;
+}
+
+int CheckTypeEql(Type t1, Type t2)
+{
+    assert(t1 != NULL && t2 != NULL);
+    if (t1->kind != t2->kind) {
+        return 0;
+    }
+    switch (kind) {
+    case BASIC:
+        return t1->u.basic == t2->u.basic;
+    case ARRAY:
+        return CheckTypeEql(t1->u.elem, t2->u.elem);
+    case STRUCTURE:
+        return CheckFieldEql(t1->u.structure, t2->u.structure);
+    default:
+        assert(0);
+    }
+}
+
+int CheckFieldEql(FieldList f1, FieldList f2)
+{
+    if ((f1 == NULL && f2 != NULL) || (f1 != NULL && f2 == NULL)) {
+        return 0;
+    }
+    if (!CheckTypeEql(f1->type, f2->type)) {
+        return 0;
+    }
+    return CheckFieldEql(f1->next, f2->next);
 }
 
 void InitProg()
@@ -444,9 +565,9 @@ void InitProg()
     FuncHead = (FuncTable)malloc(sizeof(struct FuncTable_));
     FuncHead->next = NULL;
 
-    fieldstack.depth = 0;
-    if (fieldstack.StructHead) {
-        SymTable temp = fieldstack.StructHead;
+    symtabstack.depth = 0;
+    if (symtabstack.StructHead) {
+        SymTable temp = symtabstack.StructHead;
         SymTable to_del;
         while (temp->next) {
             to_del = temp;
@@ -455,8 +576,8 @@ void InitProg()
         }
         free(temp);
     }
-    fieldstack.StructHead = (SymTable)malloc(sizeof(struct SymTable_));
-    fieldstack.StructHead->next = NULL;
+    symtabstack.StructHead = (SymTable)malloc(sizeof(struct SymTable_));
+    symtabstack.StructHead->next = NULL;
 }
 
 void CheckFuncDefined()

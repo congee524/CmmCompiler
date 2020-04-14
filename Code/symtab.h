@@ -73,10 +73,6 @@ struct Type_ {
             int size;
         } array;
         FieldList structure;
-        // struct {
-        //     char* struct_name;
-        //     FieldList structure;
-        // };
     } u;
 };
 
@@ -86,13 +82,13 @@ struct FieldList_ {
     FieldList next;
 };
 
-struct FieldSTACK_ {
+struct SymTabStack_ {
     int depth;
     SymTable StructHead;
     SymTable var_stack[256];
 };
 
-extern struct FieldSTACK_ fieldstack;
+extern struct SymTabStack_ symtabstack;
 
 void SemanticError(int error_num, int lineno, char* errtext);
 
@@ -110,11 +106,25 @@ char* TraceVarDec(Node* var_dec, int* dim, int* size);
 
 Type ConstArray(Type fund, int dim, int* size, int level);
 
+FuncTable FunDecAnalysis(Node* root, Type type);
+
+FieldList VarListAnalysis(Node* var_list);
+
+FieldList ParamDecAnalysis(Node* param);
+
 int InsertSymTab(char* type_name, Type type, int lineno);
+
+int AddFuncTab(FuncTable func, int isDefined);
 
 int CheckSymTab(char* type_name, Type type, int lineno);
 
+int CheckFuncTab(FuncTable func, int isDefined);
+
 void CheckFuncDefined();
+
+int CheckTypeEql(Type t1, Type t2);
+
+int CheckFieldEql(FieldList f1, FieldList f2);
 
 void InitProg();
 
