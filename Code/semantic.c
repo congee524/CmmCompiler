@@ -119,8 +119,8 @@ void DecListAnalysis(Node* root, Type type)
 {
     Node* dec = root->child[0];
     Node* var_dec = dec->child[0];
-    int dim = 0, size[256];
-    char* name = TraceVarDec(var_dec, &dim, size);
+    int dim = 0, *size = (int*)malloc(256 * sizeof(int)), m_size = 256;
+    char* name = TraceVarDec(var_dec, &dim, size, &m_size);
     Type ret = ConstArray(type, dim, size, 0);
     INFO("Begin add local var to symtab");
     AddSymTab(name, ret, dec->line);
@@ -219,8 +219,8 @@ void ExtDecListAnalysis(Node* root, Type type)
     }
 
     Type new_var = (Type)malloc(sizeof(struct Type_));
-    int dim = 0, size[256];
-    char* name = TraceVarDec(root->child[0], &dim, size);
+    int dim = 0, *size = (int*)malloc(256 * sizeof(int)), m_size = 256;
+    char* name = TraceVarDec(root->child[0], &dim, size, &m_size);
 
     new_var = ConstArray(type, dim, size, 0);
     AddSymTab(name, new_var, root->line);
@@ -242,7 +242,7 @@ FieldList FetchStructField(Node* def_list)
         temp->next = FetchStructField(def_list->child[1]);
         /* Check duplicated field */
         FieldList p1 = ret;
-        while (p1) {
+        while (p1 && p1 != temp->next) {
             FieldList p2 = temp;
             while (p2->next) {
                 if (!strcmp(p1->name, p2->next->name)) {
@@ -251,8 +251,9 @@ FieldList FetchStructField(Node* def_list)
                     SemanticError(15, dec_list->child[0]->line, msg);
                     /* remove the duplicated field */
                     p2->next = p2->next->next;
+                } else {
+                    p2 = p2->next;
                 }
-                p2 = p2->next;
             }
             p1 = p1->next;
         }
@@ -265,8 +266,8 @@ FieldList ConstFieldFromDecList(Node* dec_list, Type type)
     FieldList ret = (FieldList)malloc(sizeof(struct FieldList_));
     Node* dec = dec_list->child[0];
     Node* var_dec = dec->child[0];
-    int dim = 0, size[256];
-    char* name = TraceVarDec(var_dec, &dim, size);
+    int dim = 0, *size = (int*)malloc(256 * sizeof(int)), m_size = 256;
+    char* name = TraceVarDec(var_dec, &dim, size, &m_size);
     ret->name = strdup(name);
     ret->type = ConstArray(type, dim, size, 0);
     ret->next = NULL;
@@ -326,8 +327,8 @@ FieldList ParamDecAnalysis(Node* param)
     FieldList ret = malloc(sizeof(struct FieldList_));
 
     Type basic_type = SpecAnalysis(param->child[0]);
-    int dim = 0, size[256];
-    char* para_name = TraceVarDec(param->child[1], &dim, size);
+    int dim = 0, *size = (int*)malloc(256 * sizeof(int)), m_size = 256;
+    char* para_name = TraceVarDec(param->child[1], &dim, size, &m_size);
     Type para_type = ConstArray(basic_type, dim, size, 0);
 
     ret->name = strdup(para_name);
@@ -533,12 +534,13 @@ void ExpAnalysis(Node* exp)
     }
     case 4: {
         if (!strcmp(exp->child[0]->symbol, "ID")) {
+            /* ID LP Args RP */
             ExpNode eval = exp->eval;
-            /* there is no pointer */
             FieldList func_para = ArgsAnalysis(exp->child[2]);
             eval->isRight = 1;
             eval->type = CheckFuncCall(exp->child[0]->ident, func_para, exp->line);
         } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
+            /* Exp LB Exp RB */
             Node *obj = exp->child[0], *coord = exp->child[2];
             ExpAnalysis(obj);
             ExpAnalysis(coord);
@@ -549,7 +551,8 @@ void ExpAnalysis(Node* exp)
                 SemanticError(12, coord->line, "NonInteger in array access operator");
             }
             temp_type->kind = ARRAY;
-            if (!CheckTypeEql(obj->eval->type, temp_type)) {
+            // if (!CheckTypeEql(obj->eval->type, temp_type)) {
+            if (obj->eval->type->kind != ARRAY) {
                 SemanticError(10, obj->line, "Apply array access operator on nonArray");
             } else {
                 exp->eval->type = obj->eval->type->u.array.elem;
@@ -585,8 +588,10 @@ Type CheckFuncCall(char* func_name, FieldList para, int lineno)
     Type ret = NULL;
     FuncTable temp = FuncHead;
     while (temp->next) {
-        temp->next;
+        temp = temp->next;
+        INFO("to strcmp tow name");
         if (!strcmp(func_name, temp->name)) {
+            INFO("yes, the same");
             ret = temp->ret_type;
             if (!CheckFieldEql(para, temp->para)) {
                 char msg[128];
@@ -595,6 +600,7 @@ Type CheckFuncCall(char* func_name, FieldList para, int lineno)
             }
             break;
         }
+        INFO("finish strcmp");
     }
     if (ret == NULL) {
         if (LookupTab(func_name) == NULL) {
@@ -692,7 +698,7 @@ Type StructSpecAnalysis(Node* struct_spec)
             if (temp->kind != STRUCTURE) {
                 char msg[128];
                 sprintf(msg, "Duplicated structure name \"%s\"", tag->child[0]->ident);
-                SemanticError(16, tag->line, msg);
+                SemanticError(16, tag->child[0]->line, msg);
             } else {
                 ret = temp;
             }
@@ -708,9 +714,9 @@ Type StructSpecAnalysis(Node* struct_spec)
         if (tag->n_child == 0) {
             char struct_name[32];
             sprintf(struct_name, "anon_struture@%d_", tag->line);
-            AddSymTab(struct_name, ret, def_list->line);
+            AddSymTab(struct_name, ret, tag->line);
         } else {
-            AddSymTab(tag->child[0]->ident, ret, def_list->line);
+            AddSymTab(tag->child[0]->ident, ret, tag->line);
         }
     } else {
         assert(0);
@@ -718,7 +724,7 @@ Type StructSpecAnalysis(Node* struct_spec)
     return ret;
 }
 
-char* TraceVarDec(Node* var_dec, int* dim, int* size)
+char* TraceVarDec(Node* var_dec, int* dim, int* size, int* m_size)
 {
     /* to get array or ID */
     INFO("here");
@@ -727,14 +733,16 @@ char* TraceVarDec(Node* var_dec, int* dim, int* size)
         INFO(var_dec->child[0]->ident);
         ret = var_dec->child[0]->ident;
     } else if (var_dec->n_child == 4) {
-        /* support max 256 dimension */
-        if (*dim >= 256) {
-            fprintf(stderr, "support maximum 256 dimension!\n");
-            return NULL;
+        if (*dim >= *m_size) {
+            INFO("breakpoint");
+            *m_size = *m_size + 256;
+            size = (int*)realloc(size, (*m_size) * sizeof(int));
+            // fprintf(stderr, "support maximum 256 dimension!\n");
+            // return NULL;
         }
         size[*dim] = var_dec->child[2]->ival;
         *dim = *dim + 1;
-        ret = TraceVarDec(var_dec->child[0], dim, size);
+        ret = TraceVarDec(var_dec->child[0], dim, size, m_size);
     } else {
         assert(0);
     }
@@ -969,6 +977,9 @@ int CheckTypeEql(Type t1, Type t2)
     if ((t1 == NULL && t2 != NULL) || (t1 != NULL && t2 == NULL)) {
         INFO("NULL type");
         return 0;
+    }
+    if (t1 == NULL && t2 == NULL) {
+        return 1;
     }
     if (t1->kind != t2->kind) {
         return 0;

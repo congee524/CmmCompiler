@@ -53,8 +53,9 @@ Program:
         }
         if (!errors) {
             /* CP1 */
+            #ifdef DEBUG
             PrintParserTree($$, 0);
-
+            #endif
             /* CP2 */
             SemanticAnalysis($$);
         }

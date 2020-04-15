@@ -3,12 +3,13 @@
 
 #define _POSIX_C_SOURCE 200809L
 #include <assert.h>
+#include <malloc.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 #define INFO(msg)                                         \
@@ -142,7 +143,7 @@ Type SpecAnalysis(Node* spec);
 
 Type StructSpecAnalysis(Node* struct_spec);
 
-char* TraceVarDec(Node* var_dec, int* dim, int* size);
+char* TraceVarDec(Node* var_dec, int* dim, int* size, int* m_size);
 
 Type ConstArray(Type fund, int dim, int* size, int level);
 
