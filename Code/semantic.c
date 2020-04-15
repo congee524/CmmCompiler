@@ -4,11 +4,6 @@ SymTable symtable[0x3fff + 1];
 FuncTable FuncHead;
 struct SymTabStack_ symtabstack;
 
-void SemanticError(int error_num, int lineno, char* errtext)
-{
-    fprintf(stderr, "Error type %d at Line %d: %s.\n", error_num, lineno, errtext);
-}
-
 static unsigned int hash(char* name)
 {
     unsigned int val = 0, i;
@@ -19,6 +14,11 @@ static unsigned int hash(char* name)
         }
     }
     return val;
+}
+
+static void SemanticError(int error_num, int lineno, char* errtext)
+{
+    fprintf(stderr, "Error type %d at Line %d: %s.\n", error_num, lineno, errtext);
 }
 
 void SemanticAnalysis(Node* root)
@@ -32,7 +32,7 @@ void SemanticAnalysis(Node* root)
     } else if (root->n_child == 1) {
         /* Program := ExtDefList */
         INFO("Program");
-        InitProg();
+        InitSA();
         SemanticAnalysis(root->child[0]);
         CheckFuncDefined();
     }
@@ -193,6 +193,29 @@ void StmtAnalysis(Node* stmt, FuncTable func)
     }
 }
 
+void ExtDecListAnalysis(Node* root, Type type)
+{
+    /*  ExtDef: Specifier ExtDecList SEMI
+        type is the Type of Specifier
+        ExtDecList: 
+            VarDec
+        |   VarDec COMMA ExtDecList
+        ;
+    */
+    assert(root != NULL);
+
+    if (root->n_child == 3) {
+        ExtDecListAnalysis(root->child[2], type);
+    }
+
+    Type new_var = (Type)malloc(sizeof(struct Type_));
+    int dim = 0, size[256];
+    char* name = TraceVarDec(root->child[0], &dim, size);
+
+    new_var = ConstArray(type, dim, size, 0);
+    AddSymTab(name, new_var, root->line);
+}
+
 FuncTable FunDecAnalysis(Node* root, Type type)
 {
     /* get Func here */
@@ -241,29 +264,6 @@ FieldList ParamDecAnalysis(Node* param)
     ret->type = para_type;
     ret->next = NULL;
     return ret;
-}
-
-void ExtDecListAnalysis(Node* root, Type type)
-{
-    /*  ExtDef: Specifier ExtDecList SEMI
-        type is the Type of Specifier
-        ExtDecList: 
-            VarDec
-        |   VarDec COMMA ExtDecList
-        ;
-    */
-    assert(root != NULL);
-
-    if (root->n_child == 3) {
-        ExtDecListAnalysis(root->child[2], type);
-    }
-
-    Type new_var = (Type)malloc(sizeof(struct Type_));
-    int dim = 0, size[256];
-    char* name = TraceVarDec(root->child[0], &dim, size);
-
-    new_var = ConstArray(type, dim, size, 0);
-    AddSymTab(name, new_var, root->line);
 }
 
 void ExpAnalysis(Node* exp)
@@ -1006,7 +1006,7 @@ int CheckFieldEql(FieldList f1, FieldList f2)
     return CheckFieldEql(f1->next, f2->next);
 }
 
-void InitProg()
+void InitSA()
 {
     for (int i = 0; i <= 0x3fff; i++) {
         if (symtable[i]) {

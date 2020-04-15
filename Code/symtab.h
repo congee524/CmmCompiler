@@ -110,17 +110,9 @@ extern SymTable symtable[0x3fff + 1];
 extern FuncTable FuncHead;
 extern struct SymTabStack_ symtabstack;
 
-void SemanticError(int error_num, int lineno, char* errtext);
-
 void SemanticAnalysis(Node* root);
 
 void ExtDefAnalysis(Node* root);
-
-void ExtDecListAnalysis(Node* root, Type type);
-
-Type SpecAnalysis(Node* spec);
-
-Type StructSpecAnalysis(Node* struct_spec);
 
 void CompSTAnalysis(Node* root, FuncTable func);
 
@@ -130,9 +122,13 @@ void DefAnalysis(Node* def);
 
 void DecListAnalysis(Node* root, Type type);
 
-char* TraceVarDec(Node* var_dec, int* dim, int* size);
+void StmtListAnalysis(Node* stmt_list, FuncTable func);
 
-Type ConstArray(Type fund, int dim, int* size, int level);
+void StmtAnalysis(Node* stmt, FuncTable func);
+
+void ExpAnalysis(Node* exp);
+
+void ExtDecListAnalysis(Node* root, Type type);
 
 FuncTable FunDecAnalysis(Node* root, Type type);
 
@@ -142,9 +138,23 @@ FieldList ParamDecAnalysis(Node* param);
 
 FieldList ArgsAnalysis(Node* args);
 
+Type SpecAnalysis(Node* spec);
+
+Type StructSpecAnalysis(Node* struct_spec);
+
+char* TraceVarDec(Node* var_dec, int* dim, int* size);
+
+Type ConstArray(Type fund, int dim, int* size, int level);
+
+void CreateLocalVar();
+
+void DeleteLocalVar();
+
 int AddSymTab(char* type_name, Type type, int lineno);
 
 int AddFuncTab(FuncTable func, int isDefined);
+
+Type LookupTab(char* name);
 
 int CheckSymTab(char* type_name, Type type, int lineno);
 
@@ -164,6 +174,6 @@ int CheckLogicOPE(Node* exp);
 
 int CheckArithOPE(Node* obj1, Node* obj2);
 
-void InitProg();
+void InitSA();
 
 #endif
