@@ -410,7 +410,7 @@ void ExpAnalysis(Node* exp)
             } else if (!strcmp(ope->symbol, "STAR")) {
                 memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
                 if (CheckArithOPE(obj1, obj2)) {
-                    exp->isRight = 1;
+                    exp->eval->isRight = 1;
                     exp->eval->val = obj1->eval->val * obj2->eval->val;
                 }
             } else if (!strcmp(ope->symbol, "DIV")) {
@@ -1032,7 +1032,7 @@ void InitSA()
         }
         free(temp);
         if (FuncHead) {
-            free(Funchead);
+            free(FuncHead);
         }
     }
     FuncHead = (FuncTable)malloc(sizeof(struct FuncTable_));
