@@ -101,6 +101,7 @@ void CompSTAnalysis(Node* root, FuncTable func)
 
 void DefListAnalysis(Node* def_list)
 {
+    /* only server for compst */
     if (def_list->n_child == 2) {
         DefAnalysis(def_list->child[0]);
         DefListAnalysis(def_list->child[1]);
@@ -109,6 +110,7 @@ void DefListAnalysis(Node* def_list)
 
 void DefAnalysis(Node* def)
 {
+    INFO("to get type");
     Type fund_type = SpecAnalysis(def->child[0]);
     DecListAnalysis(def->child[1], fund_type);
 }
@@ -120,7 +122,9 @@ void DecListAnalysis(Node* root, Type type)
     int dim = 0, size[256];
     char* name = TraceVarDec(var_dec, &dim, size);
     Type ret = ConstArray(type, dim, size, 0);
+    INFO("Begin add local var to symtab");
     AddSymTab(name, ret, dec->line);
+    INFO("Finish add local var to symtab");
     if (dec->n_child == 3) {
         Node* exp = dec->child[2];
         ExpAnalysis(exp);
@@ -151,7 +155,9 @@ void StmtAnalysis(Node* stmt, FuncTable func)
     }
     case 2: {
         /* Exp SEMI */
+        INFO("begin Exp SEMI");
         ExpAnalysis(stmt->child[0]);
+        INFO("end Exp SEMI");
         break;
     }
     case 3: {
@@ -218,6 +224,66 @@ void ExtDecListAnalysis(Node* root, Type type)
 
     new_var = ConstArray(type, dim, size, 0);
     AddSymTab(name, new_var, root->line);
+}
+
+FieldList FetchStructField(Node* def_list)
+{
+    /* check whether duplicated field happend */
+    FieldList ret = NULL;
+    if (def_list->n_child == 2) {
+        Node* def = def_list->child[0];
+        Node* dec_list = def->child[1];
+        Type fund_type = SpecAnalysis(def->child[0]);
+        ret = ConstFieldFromDecList(dec_list, fund_type);
+        FieldList temp = ret;
+        while (temp->next) {
+            temp = temp->next;
+        }
+        temp->next = FetchStructField(def_list->child[1]);
+        /* Check duplicated field */
+        FieldList p1 = ret;
+        while (p1) {
+            FieldList p2 = temp;
+            while (p2->next) {
+                if (!strcmp(p1->name, p2->next->name)) {
+                    char msg[128];
+                    sprintf(msg, "Redefined field \"%s\"", p1->name);
+                    SemanticError(15, dec_list->child[0]->line, msg);
+                    /* remove the duplicated field */
+                    p2->next = p2->next->next;
+                }
+                p2 = p2->next;
+            }
+            p1 = p1->next;
+        }
+    }
+    return ret;
+}
+
+FieldList ConstFieldFromDecList(Node* dec_list, Type type)
+{
+    FieldList ret = (FieldList)malloc(sizeof(struct FieldList_));
+    Node* dec = dec_list->child[0];
+    Node* var_dec = dec->child[0];
+    int dim = 0, size[256];
+    char* name = TraceVarDec(var_dec, &dim, size);
+    ret->name = strdup(name);
+    ret->type = ConstArray(type, dim, size, 0);
+    ret->next = NULL;
+
+    if (dec->n_child == 3) {
+        /* VarDec ASSIGNOP Exp */
+        SemanticError(15, dec->line, "Initialize the domain of the structure");
+        ExpAnalysis(dec->child[2]);
+        if (!CheckTypeEql(ret->type, dec->child[2]->eval->type)) {
+            SemanticError(5, dec->child[1]->line, "Mismatched types on the sides of the assignment");
+        }
+    }
+
+    if (dec_list->n_child == 3) {
+        ret->next = ConstFieldFromDecList(dec_list->child[2], type);
+    }
+    return ret;
 }
 
 FuncTable FunDecAnalysis(Node* root, Type type)
@@ -349,13 +415,13 @@ void ExpAnalysis(Node* exp)
                     char msg[128];
                     sprintf(msg, "Assign to left value");
                     SemanticError(6, obj1->line, msg);
-                } else {
-                    if (!CheckTypeEql(obj1->eval->type, obj2->eval->type)) {
-                        char msg[128];
-                        sprintf(msg, "Mismatched types on the sides of the assignment");
-                        SemanticError(5, ope->line, msg);
-                    }
                 }
+                if (!CheckTypeEql(obj1->eval->type, obj2->eval->type)) {
+                    char msg[128];
+                    sprintf(msg, "Mismatched types on the sides of the assignment");
+                    SemanticError(5, ope->line, msg);
+                }
+
                 memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
             } else if (!strcmp(ope->symbol, "AND")) {
                 memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
@@ -584,11 +650,10 @@ Type SpecAnalysis(Node* spec)
     assert(spec->n_child == 1);
 
     INFO("sepc analysis");
-    Type ret;
+    Type ret = NULL;
     Node* tmp = spec->child[0];
 
     if (!strcmp(tmp->symbol, "TYPE")) {
-        INFO("int a");
         ret = (Type)malloc(sizeof(struct Type_));
         ret->kind = BASIC;
         if (!strcmp(tmp->ident, "int")) {
@@ -598,9 +663,7 @@ Type SpecAnalysis(Node* spec)
         } else {
             assert(0);
         }
-        INFO("finish");
     } else if (!strcmp(tmp->symbol, "StructSpecifier")) {
-        INFO("STRUCT");
         ret = StructSpecAnalysis(tmp);
     } else {
         assert(0);
@@ -613,134 +676,42 @@ Type StructSpecAnalysis(Node* struct_spec)
     /* if return NULL then error happen or empty struture */
     /* ret leak when define error happen */
     assert(struct_spec != NULL);
-    assert(struct_spec->n_child >= 2);
 
-    Type ret = (Type)malloc(sizeof(struct Type_));
+    Type ret = NULL;
     Node* tag = struct_spec->child[1];
-    ret->kind = STRUCTURE;
-    ret->u.structure = NULL;
     unsigned int tag_idx;
 
     if (!strcmp(tag->symbol, "Tag")) {
         /* declare structure variable */
-        tag_idx = hash(tag->child[0]->ident);
-        if (symtable[tag_idx] != NULL) {
-            SymTable temp = symtable[tag_idx];
-            while (temp) {
-                if (!strcmp(temp->name, tag->child[0]->ident) && temp->type->kind != STRUCTURE) {
-                    /* duplicated structure name */
-                    char msg[128]; /* the length of ID is less than 32 */
-                    sprintf(msg, "Duplicated structure name \"%s\"", tag->child[0]->ident);
-                    SemanticError(16, tag->line, msg);
-                    return ret;
-                } else if (!strcmp(temp->name, tag->child[0]->ident)) {
-                    if (ret->u.structure != NULL) {
-                        /* shouldn't arrive here 
-                           it means there are multiple the same structure
-                           but the error should be found in def struture!
-                           Note that structure shouldn't be defined in funciton 
-                        */
-                        assert(0);
-                    }
-                    ret->u.structure = temp->type->u.structure;
-                    // ret->u.struct_name = strdup(tag->child[0]->ident);
-                }
-                temp = temp->next;
-            }
-        }
-        if (ret->u.structure == NULL) {
-            /* hasn't been defined */
+        Type temp = LookupTab(tag->child[0]->ident);
+        if (temp == NULL) {
             char msg[128];
             sprintf(msg, "Undefined structure \"%s\"", tag->child[0]->ident);
             SemanticError(17, tag->line, msg);
+        } else {
+            if (temp->kind != STRUCTURE) {
+                char msg[128];
+                sprintf(msg, "Duplicated structure name \"%s\"", tag->child[0]->ident);
+                SemanticError(16, tag->line, msg);
+            } else {
+                ret = temp;
+            }
         }
     } else if (!strcmp(tag->symbol, "OptTag")) {
         /* define structure */
-        INFO("opttag");
-        char struct_name[32];
-        if (tag->n_child == 0) {
-            /* Anonymous structure */
-            sprintf(struct_name, "anon_struture@%d_", tag->line);
-        } else {
-            strcpy(struct_name, tag->child[0]->ident);
-        }
-
-        // ret->u.struct_name = strdup(struct_name);
-        FieldList cur;
         Node* def_list = struct_spec->child[3];
-        if (def_list->n_child == 2) {
-            /* not empty structure */
-            ret->u.structure = (FieldList)malloc(sizeof(struct FieldList_));
-            ret->u.structure->next = NULL;
-            cur = ret->u.structure;
-        }
-        while (def_list->n_child == 2) {
-            INFO("travel deflist of STRUCT OptTag LC DefList RC");
-            Node* def = def_list->child[0];
-            INFO("def_list!");
-            Type cur_type = SpecAnalysis(def->child[0]);
+        ret = (Type)malloc(sizeof(struct Type_));
+        ret->kind = STRUCTURE;
+        ret->u.structure = FetchStructField(def_list);
 
-            Node* dec_list = def->child[1];
-            do {
-                INFO("travel dec list");
-                Node* dec = dec_list->child[0];
-                if (dec->n_child == 3) {
-                    /* initial the variable in struture */
-                    char msg[128];
-                    sprintf(msg, "Initialize the domain of the structure");
-                    SemanticError(15, dec->line, msg);
-                }
-                /* add the domain regardless of initialization */
-
-                Node* var_dec = dec->child[0];
-                INFO("travel var list");
-                int dim = 0, size[256];
-                char* var_name = TraceVarDec(var_dec, &dim, size);
-                /* check whether duplicated field exist */
-                FieldList check_field = ret->u.structure;
-                INFO("check whether duplicated name");
-                int flag = 1;
-                while (check_field && check_field->name) {
-                    INFO(check_field->name);
-                    INFO("check");
-                    if (check_field->name && !strcmp(check_field->name, var_name)) {
-                        flag = 0;
-                        break;
-                    }
-                    check_field = check_field->next;
-                }
-
-                if (!flag) {
-                    char msg[128];
-                    sprintf(msg, "Redefined field \"%s\"", var_name);
-                    SemanticError(15, dec->child[0]->line, msg);
-                } else {
-                    INFO("print var name");
-                    cur->name = strdup(var_name);
-                    INFO("to const array");
-                    cur->type = ConstArray(cur_type, dim, size, 0);
-                }
-                if (dec_list->n_child == 3) {
-                    dec_list = dec_list->child[2];
-                    cur->next = (FieldList)malloc(sizeof(struct FieldList_));
-                    cur->next->next = NULL;
-                    cur = cur->next;
-                } else {
-                    dec_list = NULL;
-                }
-            } while (dec_list);
-
-            def_list = def_list->child[1];
-            if (def_list->n_child == 2) {
-                cur->next = (FieldList)malloc(sizeof(struct FieldList_));
-                cur = cur->next;
-                cur->next = NULL;
-            } else {
-                break;
-            }
-        }
         /* define struct, need to add to symtab */
-        AddSymTab(struct_name, ret, def_list->line);
+        if (tag->n_child == 0) {
+            char struct_name[32];
+            sprintf(struct_name, "anon_struture@%d_", tag->line);
+            AddSymTab(struct_name, ret, def_list->line);
+        } else {
+            AddSymTab(tag->child[0]->ident, ret, def_list->line);
+        }
     } else {
         assert(0);
     }
@@ -790,12 +761,18 @@ int AddSymTab(char* type_name, Type type, int lineno)
     INFO("add symtab");
 
     if (CheckSymTab(type_name, type, lineno)) {
+        INFO("check finish");
         unsigned int idx = hash(type_name);
+        INFO("finsih hash");
         SymTable new_sym = (SymTable)malloc(sizeof(struct SymTable_));
+        INFO("finish new symbol");
+        assert(type_name != NULL);
         new_sym->name = strdup(type_name);
+        INFO("finish copy name");
         new_sym->type = type;
         new_sym->next = symtable[idx];
         symtable[idx] = new_sym;
+        INFO("finish const new symbol");
         if (type->kind == STRUCTURE) {
             SymTableNode temp = symtabstack.StructHead;
             while (temp->next != NULL) {
@@ -807,6 +784,7 @@ int AddSymTab(char* type_name, Type type, int lineno)
             temp->next = NULL;
         } else if (symtabstack.depth > 0) {
             /* add to local var list */
+            INFO("add local var");
             SymTableNode temp = symtabstack.var_stack[symtabstack.depth - 1];
             while (temp->next) {
                 temp = temp->next;
@@ -887,21 +865,21 @@ void DeleteLocalVar()
             last->next = to_del->next;
         }
     }
-
-    temp = symtabstack.var_stack[symtabstack.depth - 1];
-    SymTableNode to_del;
-    while (temp->next) {
-        to_del = temp;
-        temp = temp->next;
-        free(to_del->var);
-        free(to_del);
-    }
-    free(temp->var);
-    free(temp);
-    if (symtabstack.var_stack[symtabstack.depth - 1] != NULL) {
-        free(symtabstack.var_stack[symtabstack.depth - 1]);
-        symtabstack.var_stack[--symtabstack.depth] = NULL;
-    }
+    symtabstack.var_stack[--symtabstack.depth] = NULL;
+    // temp = symtabstack.var_stack[symtabstack.depth - 1];
+    // SymTableNode to_del;
+    // while (temp->next) {
+    //     to_del = temp;
+    //     temp = temp->next;
+    //     free(to_del->var);
+    //     free(to_del);
+    // }
+    // free(temp->var);
+    // free(temp);
+    // if (symtabstack.var_stack[symtabstack.depth - 1] != NULL) {
+    //     free(symtabstack.var_stack[symtabstack.depth - 1]);
+    //     symtabstack.var_stack[--symtabstack.depth] = NULL;
+    // }
 }
 
 int CheckSymTab(char* type_name, Type type, int lineno)
@@ -1025,54 +1003,44 @@ int CheckFieldEql(FieldList f1, FieldList f2)
 void InitSA()
 {
     for (int i = 0; i <= 0x3fff; i++) {
-        if (symtable[i]) {
-            SymTable temp = symtable[i];
-            SymTable to_del;
-            while (temp->next) {
-                to_del = temp;
-                temp = temp->next;
-                free(to_del);
-            }
-            free(temp);
-        }
         symtable[i] = NULL;
     }
 
-    if (FuncHead) {
-        FuncTable temp = FuncHead;
-        FuncTable to_del;
-        while (temp->next) {
-            to_del = temp;
-            temp = temp->next;
-            free(to_del);
-        }
-        free(temp);
-        if (FuncHead) {
-            free(FuncHead);
-        }
-    }
+    // if (FuncHead) {
+    //     FuncTable temp = FuncHead;
+    //     FuncTable to_del;
+    //     while (temp->next) {
+    //         to_del = temp;
+    //         temp = temp->next;
+    //         free(to_del);
+    //     }
+    //     free(temp);
+    //     if (FuncHead) {
+    //         free(FuncHead);
+    //     }
+    // }
     FuncHead = (FuncTable)malloc(sizeof(struct FuncTable_));
     FuncHead->next = NULL;
 
     symtabstack.depth = 0;
-    if (symtabstack.StructHead) {
-        SymTableNode temp = symtabstack.StructHead;
-        SymTableNode to_del;
-        while (temp->next) {
-            to_del = temp;
-            temp = temp->next;
-            free(to_del->var);
-            free(to_del);
-        }
-        free(temp->var);
-        free(temp);
-        if (symtabstack.StructHead != NULL) {
-            free(symtabstack.StructHead);
-        }
-    }
     symtabstack.StructHead = (SymTableNode)malloc(sizeof(struct SymTableNode_));
     symtabstack.StructHead->var = NULL;
     symtabstack.StructHead->next = NULL;
+    // if (symtabstack.StructHead) {
+    //     SymTableNode temp = symtabstack.StructHead;
+    //     SymTableNode to_del;
+    //     while (temp->next) {
+    //         to_del = temp;
+    //         temp = temp->next;
+    //         free(to_del->var);
+    //         free(to_del);
+    //     }
+    //     free(temp->var);
+    //     free(temp);
+    //     if (symtabstack.StructHead != NULL) {
+    //         free(symtabstack.StructHead);
+    //     }
+    // }
 }
 
 void CheckFuncDefined()

@@ -53,7 +53,7 @@ Program:
         }
         if (!errors) {
             /* CP1 */
-            // PrintParserTree($$, 0);
+            PrintParserTree($$, 0);
 
             /* CP2 */
             SemanticAnalysis($$);

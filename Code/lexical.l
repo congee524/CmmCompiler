@@ -2,10 +2,6 @@
 #include "syntax.tab.h"
 #include "symtab.h"
 
-// #include "token.h"
-
-// #define DEBUG
-
 #define TOKEN(t) (yylval->token = t)
 
 extern int errors;
@@ -235,9 +231,6 @@ void init_yylval(char* sname) {
     yylval->line = yylineno;
     yylval->n_child = 0;
     yylval->child = NULL;
-#ifdef DEBUG
-    printf("%s %s\n", sname, yytext);
-#endif
 }
 
 void TokenError(char* err_text)

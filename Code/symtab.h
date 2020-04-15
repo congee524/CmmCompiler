@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// #define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
 #define INFO(msg)                                         \
@@ -145,6 +145,10 @@ Type StructSpecAnalysis(Node* struct_spec);
 char* TraceVarDec(Node* var_dec, int* dim, int* size);
 
 Type ConstArray(Type fund, int dim, int* size, int level);
+
+FieldList FetchStructField(Node* def_list);
+
+FieldList ConstFieldFromDecList(Node* dec_List, Type type);
 
 void CreateLocalVar();
 
