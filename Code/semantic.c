@@ -125,7 +125,7 @@ void DecListAnalysis(Node* root, Type type)
         }
     }
     if (root->n_child == 3) {
-        DecListAnalysis(root->child[2], type, func);
+        DecListAnalysis(root->child[2], type);
     }
 }
 
@@ -185,7 +185,7 @@ void StmtAnalysis(Node* stmt, FuncTable func)
         }
         free(temp_type);
         StmtAnalysis(stmt_1, func);
-        StmtAnalysis(n_stmt_1, func);
+        StmtAnalysis(stmt_2, func);
         break;
     }
     default:
@@ -358,14 +358,14 @@ void ExpAnalysis(Node* exp)
                 if (CheckLogicOPE(obj1) && CheckLogicOPE(obj2)) {
                     exp->eval->isRight = 1;
                     exp->eval->val = (int)obj1->eval->val && (int)obj2->eval->val;
-                    exp->eval->type = obj1->type;
+                    exp->eval->type = obj1->eval->type;
                 }
             } else if (!strcmp(ope->symbol, "OR")) {
                 memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
                 if (CheckLogicOPE(obj1) && CheckLogicOPE(obj2)) {
                     exp->eval->isRight = 1;
                     exp->eval->val = (int)obj1->eval->val || (int)obj2->eval->val;
-                    exp->eval->type = obj1->type;
+                    exp->eval->type = obj1->eval->type;
                 }
             } else if (!strcmp(ope->symbol, "RELOP")) {
                 memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
@@ -393,18 +393,18 @@ void ExpAnalysis(Node* exp)
                     default:
                         assert(0);
                     }
-                    exp->eval->type = obj1->type;
+                    exp->eval->type = obj1->eval->type;
                 }
             } else if (!strcmp(ope->symbol, "PLUS")) {
                 memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
                 if (CheckArithOPE(obj1, obj2)) {
-                    exp->isRight = 1;
+                    exp->eval->isRight = 1;
                     exp->eval->val = obj1->eval->val + obj2->eval->val;
                 }
             } else if (!strcmp(ope->symbol, "MINUS")) {
                 memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
                 if (CheckArithOPE(obj1, obj2)) {
-                    exp->isRight = 1;
+                    exp->eval->isRight = 1;
                     exp->eval->val = obj1->eval->val - obj2->eval->val;
                 }
             } else if (!strcmp(ope->symbol, "STAR")) {
@@ -416,7 +416,7 @@ void ExpAnalysis(Node* exp)
             } else if (!strcmp(ope->symbol, "DIV")) {
                 memcpy(exp->eval, obj1->eval, sizeof(struct ExpNode_));
                 if (CheckArithOPE(obj1, obj2)) {
-                    exp->isRight = 1;
+                    exp->eval->isRight = 1;
                     exp->eval->val = obj1->eval->val / obj2->eval->val;
                 }
             } else {
@@ -462,13 +462,13 @@ void ExpAnalysis(Node* exp)
         break;
     }
     case 4: {
-        if (!strcmp(exp->child[0], "ID")) {
+        if (!strcmp(exp->child[0]->symbol, "ID")) {
             ExpNode eval = exp->eval;
             /* there is no pointer */
             FieldList func_para = ArgsAnalysis(exp->child[2]);
             eval->isRight = 1;
             eval->type = CheckFuncCall(exp->child[0]->ident, func_para, exp->line);
-        } else if (!strcmp(exp->child[1], "Exp")) {
+        } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
             Node *obj = exp->child[0], *coord = exp->child[2];
             ExpAnalysis(obj);
             ExpAnalysis(coord);
@@ -484,9 +484,9 @@ void ExpAnalysis(Node* exp)
             } else {
                 exp->eval->type = obj->eval->type->u.array.elem;
                 if (exp->eval->type->kind == BASIC) {
-                    exp->isRight = 1;
+                    exp->eval->isRight = 1;
                 } else {
-                    exp->isRight = 0;
+                    exp->eval->isRight = 0;
                 }
             }
             free(temp_type);
@@ -517,7 +517,7 @@ Type CheckFuncCall(char* func_name, FieldList para, int lineno)
     while (temp->next) {
         temp->next;
         if (!strcmp(func_name, temp->name)) {
-            ret = ret_type;
+            ret = temp->ret_type;
             if (!CheckFieldEql(para, temp->para)) {
                 char msg[128];
                 sprintf(msg, "Mismatched parameters on calling function \"%s\"", func_name);
@@ -542,7 +542,7 @@ Type CheckFuncCall(char* func_name, FieldList para, int lineno)
 
 Type CheckStructField(FieldList structure, char* name)
 {
-    Type ret = ret;
+    Type ret = NULL;
     FieldList temp = structure;
     while (temp) {
         if (!strcmp(temp->name, name)) {
@@ -821,7 +821,7 @@ int AddFuncTab(FuncTable func, int isDefined)
 {
     if (CheckFuncTab(func, isDefined)) {
         /* there is not conflict */
-        FuncTable_ temp = FuncHead;
+        FuncTable temp = FuncHead;
         while (temp->next) {
             temp = temp->next;
             if (!strcmp(func->name, temp->name)) {
@@ -886,7 +886,7 @@ void DeleteLocalVar()
     while (temp->next) {
         to_del = temp;
         temp = temp->next;
-        free(to_del->val);
+        free(to_del->var);
         free(to_del);
     }
     free(temp->var);
@@ -983,11 +983,11 @@ int CheckTypeEql(Type t1, Type t2)
     if (t1->kind != t2->kind) {
         return 0;
     }
-    switch (kind) {
+    switch (t1->kind) {
     case BASIC:
         return t1->u.basic == t2->u.basic;
     case ARRAY:
-        return CheckTypeEql(t1->u.elem, t2->u.elem);
+        return CheckTypeEql(t1->u.array.elem, t2->u.array.elem);
     case STRUCTURE:
         return CheckFieldEql(t1->u.structure, t2->u.structure);
     default:
@@ -1023,14 +1023,17 @@ void InitSA()
     }
 
     if (FuncHead) {
-        SymTable temp = FuncHead;
-        SymTable to_del;
+        FuncTable temp = FuncHead;
+        FuncTable to_del;
         while (temp->next) {
             to_del = temp;
             temp = temp->next;
             free(to_del);
         }
         free(temp);
+        if (FuncHead) {
+            free(Funchead);
+        }
     }
     FuncHead = (FuncTable)malloc(sizeof(struct FuncTable_));
     FuncHead->next = NULL;

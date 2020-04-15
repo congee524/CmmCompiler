@@ -69,7 +69,7 @@ struct FuncTable_ {
     int lineno;
     Type ret_type;
     FieldList para;
-    int int isDefined;
+    int isDefined;
     FuncTable next;
 };
 
@@ -160,7 +160,7 @@ int CheckSymTab(char* type_name, Type type, int lineno);
 
 int CheckFuncTab(FuncTable func, int isDefined);
 
-int CheckStructField(FieldList structure, char* name);
+Type CheckStructField(FieldList structure, char* name);
 
 void CheckFuncDefined();
 
