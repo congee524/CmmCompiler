@@ -1,16 +1,13 @@
-struct {
-    int a, b, a;
-};
-
 struct test1 {
-    float a = 2;
-    int b[2][5];
+    int a, b;
+    int c[3];
 };
 
-struct test1 {
-    float c;
-};
+float func(int t1, int t2) {
+    if (t1 == 2) {
+        return 2.0;
+    } else {
+        return t2;
+    }
+}
 
-int a, c;
-float test2;
-float test1;

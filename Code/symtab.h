@@ -69,7 +69,7 @@ struct FuncTable_ {
     int lineno;
     Type ret_type;
     FieldList para;
-    int isDefined;
+    int int isDefined;
     FuncTable next;
 };
 
@@ -121,6 +121,14 @@ void ExtDecListAnalysis(Node* root, Type type);
 Type SpecAnalysis(Node* spec);
 
 Type StructSpecAnalysis(Node* struct_spec);
+
+void CompSTAnalysis(Node* root, FuncTable func);
+
+void DefListAnalysis(Node* def_list);
+
+void DefAnalysis(Node* def);
+
+void DecListAnalysis(Node* root, Type type);
 
 char* TraceVarDec(Node* var_dec, int* dim, int* size);
 

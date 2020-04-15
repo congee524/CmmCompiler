@@ -63,7 +63,7 @@ void ExtDefAnalysis(Node* root)
             /*  analyze the CompSt
                 return_type;
              */
-            TODO()
+            CompSTAnalysis(root->child[2], func);
         } else if (!strcmp(root->child[2]->symbol, "SEMI")) {
             /* function declarion */
             AddFuncTab(func, 0);
@@ -80,38 +80,117 @@ void CompSTAnalysis(Node* root, FuncTable func)
     /* analyze the compst [return_type, definition, exp etc.] */
     /* stack */
     CreateLocalVar();
+    /* add the parameter to symtable */
+    if (func != NULL && func->isDefined == 0) {
+        FieldList para = func->para;
+        while (para) {
+            AddSymTab(para->name, para->type, func->lineno);
+            para = para->next;
+        }
+        func->isDefined = 1;
+    }
     /* allowing the initialization problem */
-    Node* def_list = root->child[1];
-    DefListAnalysis(def_list, func);
-    TODO()
+    DefListAnalysis(root->child[1]);
+    StmtListAnalysis(root->child[2], func);
     DeleteLocalVar();
 }
 
-void DefListAnalysis(Node* def_list, FuncTable func)
+void DefListAnalysis(Node* def_list)
 {
     if (def_list->n_child == 2) {
-        DefAnalysis(def_list->child[0], func);
-        DefListAnalysis(def_list->child[1], func);
+        DefAnalysis(def_list->child[0]);
+        DefListAnalysis(def_list->child[1]);
     }
 }
 
-void DefAnalysis(Node* def, FuncTable func)
+void DefAnalysis(Node* def)
 {
     Type fund_type = SpecAnalysis(def->child[0]);
-    DecListAnalysis(def->child[1], fund_type, func);
+    DecListAnalysis(def->child[1], fund_type);
 }
 
-void DecListAnalysis(Node* root, Type type, FuncTable func)
+void DecListAnalysis(Node* root, Type type)
 {
     Node* dec = root->child[0];
     Node* var_dec = dec->child[0];
     int dim = 0, size[256];
     char* name = TraceVarDec(var_dec, &dim, size);
-    TODO()
-    if (LookupTab())
-        if (root->n_child == 3) {
-            DecListAnalysis(root->child[2], type, func);
+    Type ret = ConstArray(type, dim, size, 0);
+    AddSymTab(name, ret, dec->line);
+    if (dec->n_child == 3) {
+        Node* exp = dec->child[2];
+        ExpAnalysis(exp);
+        if (!CheckTypeEql(ret, exp->eval->type)) {
+            SemanticError(5, dec->child[1]->line, "Mismatched types on the sides of the assignment");
         }
+    }
+    if (root->n_child == 3) {
+        DecListAnalysis(root->child[2], type, func);
+    }
+}
+
+void StmtListAnalysis(Node* stmt_list, FuncTable func)
+{
+    if (stmt_list->n_child == 2) {
+        StmtAnalysis(stmt_list->child[0], func);
+        StmtListAnalysis(stmt_list->child[1], func);
+    }
+}
+
+void StmtAnalysis(Node* stmt, FuncTable func)
+{
+    switch (stmt->n_child) {
+    case 1: {
+        /* CompST */
+        CompSTAnalysis(stmt->child[0], func);
+        break;
+    }
+    case 2: {
+        /* Exp SEMI */
+        ExpAnalysis(stmt->child[0]);
+        break;
+    }
+    case 3: {
+        /* RETURN Exp SEMI */
+        ExpAnalysis(stmt->child[1]);
+        if (!CheckTypeEql(stmt->child[1]->eval->type, func->ret_type)) {
+            char msg[128];
+            sprintf(msg, "Return type mismatches with the ret_type of Function \"%s\"", func->name);
+            SemanticError(8, func->lineno, msg);
+        }
+        break;
+    }
+    case 5: {
+        /* IF LP Exp RP Stmt */
+        /* WHILE LP Exp RP Stmt */
+        Node *exp = stmt->child[2], *n_stmt = stmt->child[4];
+        ExpAnalysis(exp);
+        Type temp_type = (Type)malloc(sizeof(struct Type_));
+        temp_type->kind = BASIC, temp_type->u.basic = 0;
+        if (!CheckTypeEql(exp->eval->type, temp_type)) {
+            SemanticError(7, exp->line, "Wrong type of conditional statement");
+        }
+        free(temp_type);
+        StmtAnalysis(n_stmt, func);
+        break;
+    }
+    case 7: {
+        /* IF LP error RP Stmt ELSE Stmt */
+        Node *exp = stmt->child[2], *stmt_1 = stmt->child[4], *stmt_2 = stmt->child[6];
+        ExpAnalysis(exp);
+        Type temp_type = (Type)malloc(sizeof(struct Type_));
+        temp_type->kind = BASIC, temp_type->u.basic = 0;
+        if (!CheckTypeEql(exp->eval->type, temp_type)) {
+            SemanticError(7, exp->line, "Wrong type of conditional statement");
+        }
+        free(temp_type);
+        StmtAnalysis(stmt_1, func);
+        StmtAnalysis(n_stmt_1, func);
+        break;
+    }
+    default:
+        assert(0);
+    }
 }
 
 FuncTable FunDecAnalysis(Node* root, Type type)
@@ -748,7 +827,6 @@ int AddFuncTab(FuncTable func, int isDefined)
             if (!strcmp(func->name, temp->name)) {
                 /* function declaration */
                 assert(func->isDefined == 0);
-                func->isDefined = isDefined;
                 return 1;
             }
         }
