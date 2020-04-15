@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 #define INFO(msg)                                         \
@@ -152,7 +152,7 @@ void DeleteLocalVar();
 
 int AddSymTab(char* type_name, Type type, int lineno);
 
-int AddFuncTab(FuncTable func, int isDefined);
+FuncTable AddFuncTab(FuncTable func, int isDefined);
 
 Type LookupTab(char* name);
 

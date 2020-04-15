@@ -18,7 +18,7 @@ static unsigned int hash(char* name)
 
 static void SemanticError(int error_num, int lineno, char* errtext)
 {
-    fprintf(stderr, "Error type %d at Line %d: %s.\n", error_num, lineno, errtext);
+    fprintf(stdout, "Error type %d at Line %d: %s.\n", error_num, lineno, errtext);
 }
 
 void SemanticAnalysis(Node* root)
@@ -59,13 +59,15 @@ void ExtDefAnalysis(Node* root)
         FuncTable func = FunDecAnalysis(tmp, type);
         if (!strcmp(root->child[2]->symbol, "CompSt")) {
             /* function definition */
-            AddFuncTab(func, 1);
+            INFO("function definition");
+            func = AddFuncTab(func, 1);
             /*  analyze the CompSt
                 return_type;
              */
             CompSTAnalysis(root->child[2], func);
         } else if (!strcmp(root->child[2]->symbol, "SEMI")) {
             /* function declarion */
+            INFO("function declartion");
             AddFuncTab(func, 0);
         } else {
             assert(0);
@@ -80,8 +82,10 @@ void CompSTAnalysis(Node* root, FuncTable func)
     /* analyze the compst [return_type, definition, exp etc.] */
     /* stack */
     CreateLocalVar();
+    INFO("analyze compst");
     /* add the parameter to symtable */
     if (func != NULL && func->isDefined == 0) {
+        INFO("TO DEFINE");
         FieldList para = func->para;
         while (para) {
             AddSymTab(para->name, para->type, func->lineno);
@@ -817,24 +821,27 @@ int AddSymTab(char* type_name, Type type, int lineno)
     return 0;
 }
 
-int AddFuncTab(FuncTable func, int isDefined)
+FuncTable AddFuncTab(FuncTable func, int isDefined)
 {
+    INFO(func->name);
     if (CheckFuncTab(func, isDefined)) {
         /* there is not conflict */
+        INFO("no conflict");
         FuncTable temp = FuncHead;
         while (temp->next) {
             temp = temp->next;
             if (!strcmp(func->name, temp->name)) {
                 /* function declaration */
                 assert(func->isDefined == 0);
-                return 1;
+                free(func);
+                return temp;
             }
         }
         /* add the new function to the function list */
         temp->next = func;
-        return 1;
+        return func;
     }
-    return 0;
+    return func;
 }
 
 Type LookupTab(char* name)
@@ -951,9 +958,11 @@ int CheckFuncTab(FuncTable func, int isDefined)
 {
     int ret = 1;
     FuncTable temp = FuncHead;
+    assert(temp != NULL);
     while (temp->next) {
         temp = temp->next;
         if (!strcmp(func->name, temp->name)) {
+            INFO("match!");
             if (isDefined & temp->isDefined) {
                 /* has been defined */
                 char msg[128];
@@ -962,6 +971,8 @@ int CheckFuncTab(FuncTable func, int isDefined)
                 ret = 0;
             }
             /* check the param and return type */
+            assert(func->ret_type);
+            assert(temp->ret_type);
             if (!CheckTypeEql(func->ret_type, temp->ret_type) || !CheckFieldEql(func->para, temp->para)) {
                 char msg[128];
                 sprintf(msg, "Conflicting function definitions or declarations at function \"%s\"", func->name);
@@ -976,6 +987,7 @@ int CheckFuncTab(FuncTable func, int isDefined)
 
 int CheckTypeEql(Type t1, Type t2)
 {
+    INFO("check type");
     if ((t1 == NULL && t2 != NULL) || (t1 != NULL && t2 == NULL)) {
         INFO("NULL type");
         return 0;
@@ -997,8 +1009,12 @@ int CheckTypeEql(Type t1, Type t2)
 
 int CheckFieldEql(FieldList f1, FieldList f2)
 {
+    INFO("check field");
     if ((f1 == NULL && f2 != NULL) || (f1 != NULL && f2 == NULL)) {
         return 0;
+    }
+    if (f1 == NULL && f2 == NULL) {
+        return 1;
     }
     if (!CheckTypeEql(f1->type, f2->type)) {
         return 0;
