@@ -967,13 +967,6 @@ int CheckSymTab(char* type_name, Type type, int lineno)
         char msg[128];
         sprintf(msg, "Duplicated variable name \"%s\"", type_name);
         SemanticError(3, lineno, msg);
-        // if (type->kind == STRUCTURE) {
-        //     sprintf(msg, "Duplicated structure name \"%s\"", type_name);
-        //     SemanticError(16, lineno, msg);
-        // } else {
-        //     sprintf(msg, "Duplicated variable name \"%s\"", type_name);
-        //     SemanticError(3, lineno, msg);
-        // }
     }
     return ret;
 }
