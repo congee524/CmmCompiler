@@ -166,7 +166,7 @@ void StmtAnalysis(Node* stmt, FuncTable func)
         if (!CheckTypeEql(stmt->child[1]->eval->type, func->ret_type)) {
             char msg[128];
             sprintf(msg, "Return type mismatches with the ret_type of Function \"%s\"", func->name);
-            SemanticError(8, func->lineno, msg);
+            SemanticError(8, stmt->child[0]->line, msg);
         }
         break;
     }
@@ -248,7 +248,7 @@ FieldList FetchStructField(Node* def_list)
                 if (!strcmp(p1->name, p2->next->name)) {
                     char msg[128];
                     sprintf(msg, "Redefined field \"%s\"", p1->name);
-                    SemanticError(15, dec_list->child[0]->line, msg);
+                    SemanticError(15, p2->next->lineno, msg);
                     /* remove the duplicated field */
                     p2->next = p2->next->next;
                 } else {
@@ -269,6 +269,7 @@ FieldList ConstFieldFromDecList(Node* dec_list, Type type)
     int dim = 0, *size = (int*)malloc(256 * sizeof(int)), m_size = 256;
     char* name = TraceVarDec(var_dec, &dim, size, &m_size);
     ret->name = strdup(name);
+    ret->lineno = var_dec->line;
     ret->type = ConstArray(type, dim, size, 0);
     ret->next = NULL;
 
@@ -360,6 +361,10 @@ void ExpAnalysis(Node* exp)
                 char msg[128];
                 sprintf(msg, "Variable \"%s\" has not been defined", obj->ident);
                 SemanticError(1, obj->line, msg);
+                /* treat it as int */
+                eval->type = (Type)malloc(sizeof(struct Type_));
+                eval->type->kind = BASIC;
+                eval->type->u.basic = 0;
             }
         } else if (!strcmp(obj->symbol, "INT")) {
             ExpNode eval = exp->eval;
@@ -510,7 +515,7 @@ void ExpAnalysis(Node* exp)
                     SemanticError(14, exp->child[0]->line, msg);
                 } else {
                     /* access field succeed */
-                    exp->eval->isRight = 1;
+                    exp->eval->isRight = 0;
                     exp->eval->type = exp_type;
                 }
             }
@@ -556,11 +561,7 @@ void ExpAnalysis(Node* exp)
                 SemanticError(10, obj->line, "Apply array access operator on nonArray");
             } else {
                 exp->eval->type = obj->eval->type->u.array.elem;
-                if (exp->eval->type->kind == BASIC) {
-                    exp->eval->isRight = 1;
-                } else {
-                    exp->eval->isRight = 0;
-                }
+                exp->eval->isRight = 0;
             }
             free(temp_type);
         } else {
@@ -579,7 +580,11 @@ FieldList ArgsAnalysis(Node* args)
     FieldList ret = (FieldList)malloc(sizeof(struct FieldList_));
     ExpAnalysis(args->child[0]);
     ret->type = args->child[0]->eval->type;
-    ret->next = ArgsAnalysis(args->child[2]);
+    if (args->n_child == 3) {
+        ret->next = ArgsAnalysis(args->child[2]);
+    } else {
+        ret->next = NULL;
+    }
     return ret;
 }
 
@@ -591,7 +596,6 @@ Type CheckFuncCall(char* func_name, FieldList para, int lineno)
         temp = temp->next;
         INFO("to strcmp tow name");
         if (!strcmp(func_name, temp->name)) {
-            INFO("yes, the same");
             ret = temp->ret_type;
             if (!CheckFieldEql(para, temp->para)) {
                 char msg[128];
@@ -625,6 +629,7 @@ Type CheckStructField(FieldList structure, char* name)
             ret = temp->type;
             break;
         }
+        temp = temp->next;
     }
     return ret;
 }
@@ -632,6 +637,9 @@ Type CheckStructField(FieldList structure, char* name)
 int CheckLogicOPE(Node* exp)
 {
     assert(strcmp(exp->symbol, "Exp") == 0);
+    if (exp->eval->type == NULL) {
+        return 0;
+    }
     if (exp->eval->type->kind != BASIC || exp->eval->type->u.basic != 0) {
         SemanticError(7, exp->line, "Wrong operand object type");
         return 0;
@@ -709,15 +717,14 @@ Type StructSpecAnalysis(Node* struct_spec)
         ret = (Type)malloc(sizeof(struct Type_));
         ret->kind = STRUCTURE;
         ret->u.structure = FetchStructField(def_list);
-
-        /* define struct, need to add to symtab */
         if (tag->n_child == 0) {
             char struct_name[32];
             sprintf(struct_name, "anon_struture@%d_", tag->line);
-            AddSymTab(struct_name, ret, tag->line);
+            ret->u.struct_name = strdup(struct_name);
         } else {
-            AddSymTab(tag->child[0]->ident, ret, tag->line);
+            ret->u.struct_name = strdup(tag->child[0]->ident);
         }
+        AddSymTab(ret->u.struct_name, ret, tag->line);
     } else {
         assert(0);
     }
@@ -781,7 +788,7 @@ int AddSymTab(char* type_name, Type type, int lineno)
         new_sym->next = symtable[idx];
         symtable[idx] = new_sym;
         INFO("finish const new symbol");
-        if (type->kind == STRUCTURE) {
+        if (symtabstack.depth == 0 && type->kind == STRUCTURE) {
             SymTableNode temp = symtabstack.StructHead;
             while (temp->next != NULL) {
                 temp = temp->next;
@@ -819,7 +826,7 @@ FuncTable AddFuncTab(FuncTable func, int isDefined)
             if (!strcmp(func->name, temp->name)) {
                 /* function declaration */
                 assert(func->isDefined == 0);
-                free(func);
+                temp->para = func->para;
                 return temp;
             }
         }

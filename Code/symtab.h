@@ -86,12 +86,16 @@ struct Type_ {
             Type elem;
             int size;
         } array;
-        FieldList structure;
+        struct {
+            FieldList structure;
+            char* struct_name;
+        };
     } u;
 };
 
 struct FieldList_ {
     char* name;
+    int lineno;
     Type type;
     FieldList next;
 };
@@ -161,7 +165,7 @@ FuncTable AddFuncTab(FuncTable func, int isDefined);
 
 Type LookupTab(char* name);
 
-int CheckSymTab(char* type_name, Type type, int lineno);
+int CheckSymTab(char* sym_name, Type type, int lineno);
 
 int CheckFuncTab(FuncTable func, int isDefined);
 
