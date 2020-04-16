@@ -357,7 +357,7 @@ void ExpAnalysis(Node* exp)
             ExpNode eval = exp->eval;
             eval->isRight = 0;
             eval->type = LookupTab(obj->ident);
-            if (eval->type == NULL) {
+            if (eval->type == NULL || (eval->type->kind == STRUCTURE && !strcmp(obj->ident, eval->type->u.struct_name))) {
                 char msg[128];
                 sprintf(msg, "Variable \"%s\" has not been defined", obj->ident);
                 SemanticError(1, obj->line, msg);
@@ -916,7 +916,7 @@ int CheckSymTab(char* type_name, Type type, int lineno)
         SymTableNode temp = symtabstack.StructHead;
         while (temp->next) {
             temp = temp->next;
-            if (!strcmp(temp->var->name, type_name)) {
+            if (!strcmp(temp->var->type->u.struct_name, type_name)) {
                 ret = 0;
                 break;
             }
@@ -985,7 +985,7 @@ int CheckTypeEql(Type t1, Type t2)
         INFO("NULL type");
         return 0;
     }
-    if (t1 == NULL && t2 == NULL) {
+    if (t1 == t2) {
         return 1;
     }
     if (t1->kind != t2->kind) {
@@ -1009,7 +1009,7 @@ int CheckFieldEql(FieldList f1, FieldList f2)
     if ((f1 == NULL && f2 != NULL) || (f1 != NULL && f2 == NULL)) {
         return 0;
     }
-    if (f1 == NULL && f2 == NULL) {
+    if (f1 == f2) {
         return 1;
     }
     if (!CheckTypeEql(f1->type, f2->type)) {
