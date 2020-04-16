@@ -697,19 +697,16 @@ Type StructSpecAnalysis(Node* struct_spec)
 
     if (!strcmp(tag->symbol, "Tag")) {
         /* declare structure variable */
-        Type temp = LookupTab(tag->child[0]->ident);
-        if (temp == NULL) {
+        ret = GetStruct(tag->child[0]->ident);
+        if (ret == NULL) {
             char msg[128];
             sprintf(msg, "Undefined structure \"%s\"", tag->child[0]->ident);
             SemanticError(17, tag->line, msg);
-        } else {
-            if (temp->kind != STRUCTURE) {
-                char msg[128];
-                sprintf(msg, "Duplicated structure name \"%s\"", tag->child[0]->ident);
-                SemanticError(16, tag->child[0]->line, msg);
-            } else {
-                ret = temp;
-            }
+        }
+        if (LookupTab(tag->child[0]->ident)) {
+            char msg[128];
+            sprintf(msg, "Duplicated structure name \"%s\"", tag->child[0]->ident);
+            SemanticError(16, tag->child[0]->line, msg);
         }
     } else if (!strcmp(tag->symbol, "OptTag")) {
         /* define structure */
@@ -724,7 +721,8 @@ Type StructSpecAnalysis(Node* struct_spec)
         } else {
             ret->u.struct_name = strdup(tag->child[0]->ident);
         }
-        AddSymTab(ret->u.struct_name, ret, tag->line);
+        AddStructList(ret, tag->line);
+        // AddSymTab(ret->u.struct_name, ret, tag->line);
     } else {
         assert(0);
     }
@@ -773,33 +771,15 @@ int AddSymTab(char* type_name, Type type, int lineno)
     /*
         symtab store the global variables and structure
     */
-    INFO("add symtab");
-
     if (CheckSymTab(type_name, type, lineno)) {
-        INFO("check finish");
         unsigned int idx = hash(type_name);
-        INFO("finsih hash");
         SymTable new_sym = (SymTable)malloc(sizeof(struct SymTable_));
-        INFO("finish new symbol");
-        assert(type_name != NULL);
         new_sym->name = strdup(type_name);
-        INFO("finish copy name");
         new_sym->type = type;
         new_sym->next = symtable[idx];
         symtable[idx] = new_sym;
-        INFO("finish const new symbol");
-        if (symtabstack.depth == 0 && type->kind == STRUCTURE) {
-            SymTableNode temp = symtabstack.StructHead;
-            while (temp->next != NULL) {
-                temp = temp->next;
-            }
-            temp->next = (SymTableNode)malloc(sizeof(struct SymTableNode_));
-            temp = temp->next;
-            temp->var = new_sym;
-            temp->next = NULL;
-        } else if (symtabstack.depth > 0) {
+        if (symtabstack.depth > 0) {
             /* add to local var list */
-            INFO("add local var");
             SymTableNode temp = symtabstack.var_stack[symtabstack.depth - 1];
             while (temp->next) {
                 temp = temp->next;
@@ -835,6 +815,57 @@ FuncTable AddFuncTab(FuncTable func, int isDefined)
         return func;
     }
     return func;
+}
+
+int AddStructList(Type structure, int lineno)
+{
+    if (CheckStructName(structure->u.struct_name)) {
+        FieldList temp = symtabstack.StructHead;
+        while (temp->next) {
+            temp = temp->next;
+        }
+        temp->next = (FieldList)malloc(sizeof(struct FieldList_));
+        temp->next->lineno = lineno;
+        temp->next->type = structure;
+        temp->next->name = strdup(structure->u.struct_name);
+        temp->next->next = NULL;
+    } else {
+        char msg[128];
+        sprintf(msg, "Duplicated variable or structure name \"%s\"", structure->u.struct_name);
+        SemanticError(16, lineno, msg);
+    }
+}
+
+int CheckStructName(char* name)
+{
+    FieldList temp = symtabstack.StructHead;
+    while (temp->next) {
+        temp = temp->next;
+        if (!strcmp(temp->name, name)) {
+            return 0;
+        }
+    }
+    unsigned int idx = hash(name);
+    SymTable sym_temp = symtable[idx];
+    while (sym_temp) {
+        if (!strcmp(sym_temp->name, name)) {
+            return 0;
+        }
+        sym_temp = sym_temp->next;
+    }
+    return 1;
+}
+
+Type GetStruct(char* name)
+{
+    FieldList temp = symtabstack.StructHead;
+    while (temp->next) {
+        temp = temp->next;
+        if (!strcmp(temp->name, name)) {
+            return temp->type;
+        }
+    }
+    return NULL;
 }
 
 Type LookupTab(char* name)
@@ -901,28 +932,28 @@ int CheckSymTab(char* type_name, Type type, int lineno)
 {
     int ret = 1;
     unsigned int idx = hash(type_name);
-    if (symtabstack.depth == 0) {
-        if (symtable[idx] != NULL) {
-            SymTable temp = symtable[idx];
-            while (temp) {
-                if (!strcmp(temp->name, type_name)) {
-                    ret = 0;
-                    break;
+    FieldList st_temp = symtabstack.StructHead;
+    while (st_temp->next) {
+        st_temp = st_temp->next;
+        if (!strcmp(st_temp->name, type_name)) {
+            ret = 0;
+            break;
+        }
+    }
+    if (ret) {
+        if (symtabstack.depth == 0) {
+            if (symtable[idx] != NULL) {
+                SymTable temp = symtable[idx];
+                while (temp) {
+                    if (!strcmp(temp->name, type_name)) {
+                        ret = 0;
+                        break;
+                    }
+                    temp = temp->next;
                 }
-                temp = temp->next;
             }
-        }
-    } else {
-        SymTableNode temp = symtabstack.StructHead;
-        while (temp->next) {
-            temp = temp->next;
-            if (!strcmp(temp->var->type->u.struct_name, type_name)) {
-                ret = 0;
-                break;
-            }
-        }
-        if (ret) {
-            temp = symtabstack.var_stack[symtabstack.depth - 1];
+        } else {
+            SymTableNode temp = symtabstack.var_stack[symtabstack.depth - 1];
             while (temp->next) {
                 temp = temp->next;
                 if (!strcmp(temp->var->name, type_name)) {
@@ -1023,42 +1054,12 @@ void InitSA()
     for (int i = 0; i <= 0x3fff; i++) {
         symtable[i] = NULL;
     }
-
-    // if (FuncHead) {
-    //     FuncTable temp = FuncHead;
-    //     FuncTable to_del;
-    //     while (temp->next) {
-    //         to_del = temp;
-    //         temp = temp->next;
-    //         free(to_del);
-    //     }
-    //     free(temp);
-    //     if (FuncHead) {
-    //         free(FuncHead);
-    //     }
-    // }
     FuncHead = (FuncTable)malloc(sizeof(struct FuncTable_));
     FuncHead->next = NULL;
 
     symtabstack.depth = 0;
-    symtabstack.StructHead = (SymTableNode)malloc(sizeof(struct SymTableNode_));
-    symtabstack.StructHead->var = NULL;
+    symtabstack.StructHead = (FieldList)malloc(sizeof(struct FieldList_));
     symtabstack.StructHead->next = NULL;
-    // if (symtabstack.StructHead) {
-    //     SymTableNode temp = symtabstack.StructHead;
-    //     SymTableNode to_del;
-    //     while (temp->next) {
-    //         to_del = temp;
-    //         temp = temp->next;
-    //         free(to_del->var);
-    //         free(to_del);
-    //     }
-    //     free(temp->var);
-    //     free(temp);
-    //     if (symtabstack.StructHead != NULL) {
-    //         free(symtabstack.StructHead);
-    //     }
-    // }
 }
 
 void CheckFuncDefined()

@@ -107,7 +107,7 @@ struct SymTableNode_ {
 
 struct SymTabStack_ {
     int depth;
-    SymTableNode StructHead;
+    FieldList StructHead;
     SymTableNode var_stack[256];
 };
 
@@ -163,11 +163,17 @@ int AddSymTab(char* type_name, Type type, int lineno);
 
 FuncTable AddFuncTab(FuncTable func, int isDefined);
 
+int AddStructList(Type structure, int lineno);
+
 Type LookupTab(char* name);
+
+Type GetStruct(char* name);
 
 int CheckSymTab(char* sym_name, Type type, int lineno);
 
 int CheckFuncTab(FuncTable func, int isDefined);
+
+int CheckStructName(char* name);
 
 Type CheckStructField(FieldList structure, char* name);
 
