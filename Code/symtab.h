@@ -10,6 +10,7 @@
 #include <string.h>
 
 // #define DEBUG
+// #define LOCAL_SYM
 
 #ifdef DEBUG
 #define INFO(msg)                                         \
@@ -37,6 +38,11 @@ typedef struct Type_* Type;
 typedef struct FieldList_* FieldList;
 typedef struct FuncTable_* FuncTable;
 typedef struct SymTableNode_* SymTableNode;
+
+typedef struct Operand_* Operand;
+typedef struct ArgList_* ArgList;
+typedef struct InterCode_* InterCode;
+typedef struct InterCodes_* InterCodes;
 
 struct ExpNode_ {
     int isRight;
@@ -190,5 +196,93 @@ int CheckLogicOPE(Node* exp);
 int CheckArithOPE(Node* obj1, Node* obj2);
 
 void InitSA();
+
+/*============= translate ==============*/
+
+struct Operand_ {
+    enum {
+        OP_TEMP = 0,
+        OP_VAR,
+        OP_CONST_INT,
+        OP_CONST_FLOAT,
+        op_ADDR,
+        OP_LABEL,
+        OP_FUNC
+    } kind;
+    struct {
+        int var_no;
+        union {
+            int value;
+            float fval;
+            char* id;
+        };
+    } u;
+    char* name;
+};
+
+struct InterCode_ {
+    enum {
+        I_LABEL = 0, /* LABEL x: */
+        I_FUNC, /* FUNCTION f: */
+        I_ASSIGN, /* x := y */
+        I_ADD, /* x := y + z */
+        I_SUB, /* x := y - z */
+        I_MUL, /* x := y * z */
+        I_DIV, /* x := y / z */
+        I_ADDR, /* x := &y */
+        I_DEREF_R, /* x := *y */
+        I_DEREF_L, /* *x := y */
+        I_JMP, /* GOTO x */
+        I_JMP_IF, /* IF x [relop] y GOTO z */
+        I_RETURN, /* RETURN x */
+        I_DEC, /* DEC x [size] */
+        I_ARG, /* ARG x */
+        I_CALL, /* x := CALL f */
+        I_PARAM, /* PARAM x */
+        I_READ, /* READ x */
+        I_WRITE /* WRITE */
+    } kind;
+    union {
+        struct {
+            Operand x;
+        } label, jmp, ret, arg, param, read, write;
+        struct {
+            Operand f;
+        } func;
+        struct {
+            Operand x, y;
+        } assign, addr, defer_r, defer_l;
+        struct {
+            Operand x, f;
+        } call;
+        struct {
+            Operand x, y, z;
+        } add, sub, mul, div;
+        struct {
+            int size;
+            Operand x;
+        } dec;
+        struct {
+            enum {
+                GEQ, /* >= */
+                LEQ, /* <= */
+                GE, /* > */
+                LE, /* < */
+                EQ, /* == */
+                NEQ /* != */
+            } relop;
+            Operand x, y, z;
+        } jmp_if;
+    } u;
+};
+
+struct InterCodes_ {
+    InterCode data;
+    struct InterCodes_ *prev, *next;
+};
+
+extern InterCodes CodeHead;
+
+InterCodes Translate(Node* root);
 
 #endif

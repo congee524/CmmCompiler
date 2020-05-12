@@ -58,6 +58,8 @@ Program:
             #endif
             /* CP2 */
             SemanticAnalysis($$);
+            /* CP3 */
+            Translate($$);
         }
     }
 ;

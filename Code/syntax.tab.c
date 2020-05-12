@@ -474,14 +474,14 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,    48,    48,    66,    69,    75,    78,    81,    84,    91,
-      94,    97,   105,   108,   114,   117,   121,   127,   130,   136,
-     143,   146,   149,   156,   159,   163,   169,   172,   178,   185,
-     188,   195,   198,   204,   207,   210,   213,   216,   219,   222,
-     226,   230,   234,   242,   245,   251,   257,   260,   266,   269,
-     277,   280,   283,   286,   289,   292,   295,   298,   301,   304,
-     307,   311,   314,   318,   321,   325,   328,   331,   335,   339,
-     343,   350,   353
+       0,    48,    48,    68,    71,    77,    80,    83,    86,    93,
+      96,    99,   107,   110,   116,   119,   123,   129,   132,   138,
+     145,   148,   151,   158,   161,   165,   171,   174,   180,   187,
+     190,   197,   200,   206,   209,   212,   215,   218,   221,   224,
+     228,   232,   236,   244,   247,   253,   259,   262,   268,   271,
+     279,   282,   285,   288,   291,   294,   297,   300,   303,   306,
+     309,   313,   316,   320,   323,   327,   330,   333,   337,   341,
+     345,   352,   355
 };
 #endif
 
@@ -1485,586 +1485,588 @@ yyreduce:
             #endif
             /* CP2 */
             SemanticAnalysis((yyval));
+            /* CP3 */
+            Translate((yyval));
         }
     }
-#line 1491 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1493 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 3:
-#line 66 "./syntax.y" /* yacc.c:1646  */
+#line 68 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("ExtDefList", (yyloc).first_line, 2, (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1499 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1501 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 4:
-#line 69 "./syntax.y" /* yacc.c:1646  */
+#line 71 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("ExtDefList", (yyloc).first_line, 0); 
     }
-#line 1507 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1509 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 5:
-#line 75 "./syntax.y" /* yacc.c:1646  */
+#line 77 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("ExtDef", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1515 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1517 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 6:
-#line 78 "./syntax.y" /* yacc.c:1646  */
+#line 80 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("ExtDef", (yyloc).first_line, 2, (yyvsp[-1]), (yyvsp[0])); 
     }
-#line 1523 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1525 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 81 "./syntax.y" /* yacc.c:1646  */
+#line 83 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("ExtDef", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1531 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1533 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 84 "./syntax.y" /* yacc.c:1646  */
+#line 86 "./syntax.y" /* yacc.c:1646  */
     {
         /* declare funciton in global field */
         (yyval) = make_yylval("ExtDef", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1540 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1542 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 91 "./syntax.y" /* yacc.c:1646  */
+#line 93 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("ExtDecList", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 1548 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1550 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 94 "./syntax.y" /* yacc.c:1646  */
+#line 96 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("ExtDecList", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1556 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1558 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 97 "./syntax.y" /* yacc.c:1646  */
+#line 99 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("ExtDecList", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
         yyerrok; errors++;
     }
-#line 1565 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1567 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 105 "./syntax.y" /* yacc.c:1646  */
+#line 107 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Specifier", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 1573 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1575 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 108 "./syntax.y" /* yacc.c:1646  */
+#line 110 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Specifier", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 1581 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1583 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 114 "./syntax.y" /* yacc.c:1646  */
+#line 116 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("StructSpecifier", (yyloc).first_line, 5, (yyvsp[-4]), (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1589 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1591 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 117 "./syntax.y" /* yacc.c:1646  */
+#line 119 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("StructSpecifier", (yyloc).first_line, 5, (yyvsp[-4]), (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
         yyerrok; errors++;
     }
-#line 1598 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1600 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 121 "./syntax.y" /* yacc.c:1646  */
+#line 123 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("StructSpecifier", (yyloc).first_line, 2, (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1606 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1608 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 127 "./syntax.y" /* yacc.c:1646  */
+#line 129 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("OptTag", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 1614 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1616 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 130 "./syntax.y" /* yacc.c:1646  */
+#line 132 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("OptTag", (yyloc).first_line, 0);
     }
-#line 1622 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1624 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 136 "./syntax.y" /* yacc.c:1646  */
+#line 138 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Tag", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 1630 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1632 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 143 "./syntax.y" /* yacc.c:1646  */
+#line 145 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("VarDec", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 1638 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1640 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 146 "./syntax.y" /* yacc.c:1646  */
+#line 148 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("VarDec", (yyloc).first_line, 4, (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1646 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1648 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 149 "./syntax.y" /* yacc.c:1646  */
+#line 151 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("VarDec", (yyloc).first_line, 4, (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
         yyerrok; errors++;
     }
-#line 1655 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1657 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 156 "./syntax.y" /* yacc.c:1646  */
+#line 158 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("FunDec", (yyloc).first_line, 4, (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1663 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1665 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 159 "./syntax.y" /* yacc.c:1646  */
+#line 161 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("FunDec", (yyloc).first_line, 4, (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0])); 
         yyerrok; errors++;
     }
-#line 1672 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1674 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 163 "./syntax.y" /* yacc.c:1646  */
+#line 165 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("FunDec", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1680 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1682 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 169 "./syntax.y" /* yacc.c:1646  */
+#line 171 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("VarList", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1688 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1690 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 172 "./syntax.y" /* yacc.c:1646  */
+#line 174 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("VarList", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 1696 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1698 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 28:
-#line 178 "./syntax.y" /* yacc.c:1646  */
+#line 180 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("ParamDec", (yyloc).first_line, 2, (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1704 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1706 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 29:
-#line 185 "./syntax.y" /* yacc.c:1646  */
+#line 187 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("CompSt", (yyloc).first_line, 4, (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1712 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1714 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 30:
-#line 188 "./syntax.y" /* yacc.c:1646  */
+#line 190 "./syntax.y" /* yacc.c:1646  */
     { 
         (yyval) = make_yylval("CompSt", (yyloc).first_line, 4, (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
         yyerrok; errors;
     }
-#line 1721 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1723 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 195 "./syntax.y" /* yacc.c:1646  */
+#line 197 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("StmtList", (yyloc).first_line, 2, (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1729 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1731 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 32:
-#line 198 "./syntax.y" /* yacc.c:1646  */
+#line 200 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("StmtList", (yyloc).first_line, 0);
     }
-#line 1737 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1739 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 204 "./syntax.y" /* yacc.c:1646  */
+#line 206 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Stmt", (yyloc).first_line, 2, (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1745 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1747 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 34:
-#line 207 "./syntax.y" /* yacc.c:1646  */
+#line 209 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Stmt", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 1753 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1755 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 35:
-#line 210 "./syntax.y" /* yacc.c:1646  */
+#line 212 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Stmt", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1761 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1763 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 213 "./syntax.y" /* yacc.c:1646  */
+#line 215 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Stmt", (yyloc).first_line, 5, (yyvsp[-4]), (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1769 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1771 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 37:
-#line 216 "./syntax.y" /* yacc.c:1646  */
+#line 218 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Stmt", (yyloc).first_line, 7, (yyvsp[-6]), (yyvsp[-5]), (yyvsp[-4]), (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1777 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1779 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 38:
-#line 219 "./syntax.y" /* yacc.c:1646  */
+#line 221 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Stmt", (yyloc).first_line, 5, (yyvsp[-4]), (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1785 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1787 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 39:
-#line 222 "./syntax.y" /* yacc.c:1646  */
+#line 224 "./syntax.y" /* yacc.c:1646  */
     { 
         (yyval) = make_yylval("Stmt", (yyloc).first_line, 5, (yyvsp[-4]), (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0])); 
         yyerrok; errors++;
     }
-#line 1794 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1796 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 40:
-#line 226 "./syntax.y" /* yacc.c:1646  */
+#line 228 "./syntax.y" /* yacc.c:1646  */
     { 
         (yyval) = make_yylval("Stmt", (yyloc).first_line, 7, (yyvsp[-6]), (yyvsp[-5]), (yyvsp[-4]), (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0])); 
         yyerrok; errors++;
     }
-#line 1803 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1805 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 230 "./syntax.y" /* yacc.c:1646  */
+#line 232 "./syntax.y" /* yacc.c:1646  */
     { 
         (yyval) = make_yylval("Stmt", (yyloc).first_line, 5, (yyvsp[-4]), (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0])); 
         yyerrok; errors++;
     }
-#line 1812 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1814 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 42:
-#line 234 "./syntax.y" /* yacc.c:1646  */
+#line 236 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Stmt", (yyloc).first_line, 0);
         yyerrok; errors++;
     }
-#line 1821 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1823 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 242 "./syntax.y" /* yacc.c:1646  */
+#line 244 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("DefList", (yyloc).first_line, 2, (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1829 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1831 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 245 "./syntax.y" /* yacc.c:1646  */
+#line 247 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("DefList", (yyloc).first_line, 0);
     }
-#line 1837 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1839 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 251 "./syntax.y" /* yacc.c:1646  */
+#line 253 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Def", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1845 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1847 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 257 "./syntax.y" /* yacc.c:1646  */
+#line 259 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("DecList", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 1853 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1855 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 260 "./syntax.y" /* yacc.c:1646  */
+#line 262 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("DecList", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1861 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1863 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 266 "./syntax.y" /* yacc.c:1646  */
+#line 268 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Dec", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 1869 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1871 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 269 "./syntax.y" /* yacc.c:1646  */
+#line 271 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Dec", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1877 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1879 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 277 "./syntax.y" /* yacc.c:1646  */
+#line 279 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1885 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1887 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 280 "./syntax.y" /* yacc.c:1646  */
+#line 282 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1893 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1895 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 283 "./syntax.y" /* yacc.c:1646  */
+#line 285 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1901 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1903 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 286 "./syntax.y" /* yacc.c:1646  */
+#line 288 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1909 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1911 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 289 "./syntax.y" /* yacc.c:1646  */
+#line 291 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1917 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1919 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 292 "./syntax.y" /* yacc.c:1646  */
+#line 294 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1925 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1927 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 295 "./syntax.y" /* yacc.c:1646  */
+#line 297 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1933 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1935 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 298 "./syntax.y" /* yacc.c:1646  */
+#line 300 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1941 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1943 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 301 "./syntax.y" /* yacc.c:1646  */
+#line 303 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1949 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1951 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 304 "./syntax.y" /* yacc.c:1646  */
+#line 306 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1957 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1959 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 60:
-#line 307 "./syntax.y" /* yacc.c:1646  */
+#line 309 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1965 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1967 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 61:
-#line 311 "./syntax.y" /* yacc.c:1646  */
+#line 313 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 4, (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1973 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1975 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 62:
-#line 314 "./syntax.y" /* yacc.c:1646  */
+#line 316 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 4, (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1981 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1983 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 63:
-#line 318 "./syntax.y" /* yacc.c:1646  */
+#line 320 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 2, (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1989 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1991 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 321 "./syntax.y" /* yacc.c:1646  */
+#line 323 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 2, (yyvsp[-1]), (yyvsp[0]));
     }
-#line 1997 "./syntax.tab.c" /* yacc.c:1646  */
+#line 1999 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 325 "./syntax.y" /* yacc.c:1646  */
+#line 327 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 2005 "./syntax.tab.c" /* yacc.c:1646  */
+#line 2007 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 328 "./syntax.y" /* yacc.c:1646  */
+#line 330 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 2013 "./syntax.tab.c" /* yacc.c:1646  */
+#line 2015 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 331 "./syntax.y" /* yacc.c:1646  */
+#line 333 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 2021 "./syntax.tab.c" /* yacc.c:1646  */
+#line 2023 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 68:
-#line 335 "./syntax.y" /* yacc.c:1646  */
+#line 337 "./syntax.y" /* yacc.c:1646  */
     { 
         (yyval) = make_yylval("Exp", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0])); 
         yyerrok; errors++;
     }
-#line 2030 "./syntax.tab.c" /* yacc.c:1646  */
+#line 2032 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 69:
-#line 339 "./syntax.y" /* yacc.c:1646  */
+#line 341 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Exp", (yyloc).first_line, 4, (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0])); 
         yyerrok; errors++;
     }
-#line 2039 "./syntax.tab.c" /* yacc.c:1646  */
+#line 2041 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 70:
-#line 343 "./syntax.y" /* yacc.c:1646  */
+#line 345 "./syntax.y" /* yacc.c:1646  */
     { 
         (yyval) = make_yylval("Exp", (yyloc).first_line, 4, (yyvsp[-3]), (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
         yyerrok; errors++;
     }
-#line 2048 "./syntax.tab.c" /* yacc.c:1646  */
+#line 2050 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 71:
-#line 350 "./syntax.y" /* yacc.c:1646  */
+#line 352 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Args", (yyloc).first_line, 3, (yyvsp[-2]), (yyvsp[-1]), (yyvsp[0]));
     }
-#line 2056 "./syntax.tab.c" /* yacc.c:1646  */
+#line 2058 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
   case 72:
-#line 353 "./syntax.y" /* yacc.c:1646  */
+#line 355 "./syntax.y" /* yacc.c:1646  */
     {
         (yyval) = make_yylval("Args", (yyloc).first_line, 1, (yyvsp[0]));
     }
-#line 2064 "./syntax.tab.c" /* yacc.c:1646  */
+#line 2066 "./syntax.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 2068 "./syntax.tab.c" /* yacc.c:1646  */
+#line 2070 "./syntax.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2299,7 +2301,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 358 "./syntax.y" /* yacc.c:1906  */
+#line 360 "./syntax.y" /* yacc.c:1906  */
 
 
 void yyerror(const char *s) {

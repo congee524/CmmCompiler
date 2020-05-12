@@ -81,7 +81,9 @@ void CompSTAnalysis(Node* root, FuncTable func)
 {
     /* analyze the compst [return_type, definition, exp etc.] */
     /* stack */
+#ifdef LOCAL_SYM
     CreateLocalVar();
+#endif
     INFO("analyze compst");
     /* add the parameter to symtable */
     if (func != NULL && func->isDefined == 0) {
@@ -96,7 +98,9 @@ void CompSTAnalysis(Node* root, FuncTable func)
     /* allowing the initialization problem */
     DefListAnalysis(root->child[1]);
     StmtListAnalysis(root->child[2], func);
+#ifdef LOCAL_SYM
     DeleteLocalVar();
+#endif
 }
 
 void DefListAnalysis(Node* def_list)
@@ -185,7 +189,7 @@ void StmtAnalysis(Node* stmt, FuncTable func)
         break;
     }
     case 7: {
-        /* IF LP error RP Stmt ELSE Stmt */
+        /* IF LP Exp RP Stmt ELSE Stmt */
         Node *exp = stmt->child[2], *stmt_1 = stmt->child[4], *stmt_2 = stmt->child[6];
         ExpAnalysis(exp);
         Type temp_type = (Type)malloc(sizeof(struct Type_));
@@ -1053,6 +1057,28 @@ void InitSA()
     symtabstack.depth = 0;
     symtabstack.StructHead = (FieldList)malloc(sizeof(struct FieldList_));
     symtabstack.StructHead->next = NULL;
+
+    Type temp_type = (Type)malloc(sizeof(struct Type_));
+    temp_type->kind = BASIC;
+    temp_type->u.basic = 0;
+
+    FuncTable read = (FuncTable)malloc(sizeof(struct FuncTable_));
+    read->name = strdup("read");
+    read->ret_type = temp_type;
+    read->isDefined = 1;
+    read->para = NULL;
+    read->next = NULL;
+    AddFuncTab(read, 1);
+
+    FuncTable write = (FuncTable)malloc(sizeof(struct FuncTable_));
+    write->name = strdup("write");
+    write->ret_type = temp_type;
+    write->isDefined = 1;
+    write->para = (FieldList)malloc(sizeof(struct FieldList_));
+    write->para->type = temp_type;
+    write->para->next = NULL;
+    write->next = NULL;
+    AddFuncTab(write, 1);
 }
 
 void CheckFuncDefined()
