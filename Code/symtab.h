@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// #define DEBUG
+#define DEBUG
 // #define LOCAL_SYM
 
 #ifdef DEBUG
@@ -44,6 +44,10 @@ typedef struct ArgList_* ArgList;
 typedef struct InterCode_* InterCode;
 typedef struct InterCodes_* InterCodes;
 
+unsigned int hash(char* name);
+
+/*============= semantic =============*/
+
 struct ExpNode_ {
     int isRight;
     double val;
@@ -68,6 +72,8 @@ typedef struct Node {
 struct SymTable_ {
     char* name;
     Type type;
+    Operand op_var;
+    int reg_no;
     SymTable next;
 };
 
@@ -175,6 +181,8 @@ Type LookupTab(char* name);
 
 Type GetStruct(char* name);
 
+int GetSize(Type type);
+
 int CheckSymTab(char* sym_name, Type type, int lineno);
 
 int CheckFuncTab(FuncTable func, int isDefined);
@@ -197,7 +205,7 @@ int CheckArithOPE(Node* obj1, Node* obj2);
 
 void InitSA();
 
-/*============= translate ==============*/
+/*============= translate =============*/
 
 struct Operand_ {
     enum {
@@ -209,15 +217,18 @@ struct Operand_ {
         OP_LABEL,
         OP_FUNC
     } kind;
-    struct {
+    union {
         int var_no;
-        union {
-            int value;
-            float fval;
-            char* id;
-        };
+        int value;
+        float fval;
+        char* id;
     } u;
-    char* name;
+};
+
+struct ArgList_ {
+    Operand arg;
+    struct ArgList_* next;
+    struct ArgList_* prev;
 };
 
 struct InterCode_ {
@@ -278,11 +289,42 @@ struct InterCode_ {
 
 struct InterCodes_ {
     InterCode data;
-    struct InterCodes_ *prev, *next;
+    struct InterCodes_* prev;
+    struct InterCodes_* next;
 };
 
 extern InterCodes CodeHead;
 
 InterCodes Translate(Node* root);
+
+InterCodes TranslateExtDef(Node* ext_def);
+
+InterCodes TranslateFunDec(Node* fun_dec);
+
+InterCodes TranslateVarList(Node* var_list);
+
+InterCodes TranslateParamDec(Node* param_dec);
+
+InterCodes TranslateCompSt(Node* comp_st);
+
+InterCodes TranslateDefList(Node* def_list);
+
+InterCodes TranslateDecList(Node* dec_list);
+
+InterCodes TranslateDec(Node* dec);
+
+InterCodes TranslateStmtList(Node* stmt_list);
+
+InterCodes TranslateStmt(Node* stmt);
+
+InterCodes TranslateExp(Node* exp, Operand place);
+
+Operand LookupOpe(char* name);
+
+InterCodes JointCodes(InterCodes code1, InterCodes code2);
+
+InterCodes MakeInterCodesNode();
+
+Operand NewTemp();
 
 #endif

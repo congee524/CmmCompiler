@@ -69,13 +69,15 @@
 
 int errors;
 
+extern InterCodes CodeHead;
+
 int yylex();
 void yyerror(const char *s);
 struct Node* make_yylval(char* sname, int line, int num, ...);
 void PrintParserTree(struct Node* node, int level);
 
 
-#line 79 "./syntax.tab.c" /* yacc.c:339  */
+#line 81 "./syntax.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -172,7 +174,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 176 "./syntax.tab.c" /* yacc.c:358  */
+#line 178 "./syntax.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -474,7 +476,7 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,    48,    48,    68,    71,    77,    80,    83,    86,    93,
+       0,    50,    50,    68,    71,    77,    80,    83,    86,    93,
       96,    99,   107,   110,   116,   119,   123,   129,   132,   138,
      145,   148,   151,   158,   161,   165,   171,   174,   180,   187,
      190,   197,   200,   206,   209,   212,   215,   218,   221,   224,
@@ -1471,7 +1473,7 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 48 "./syntax.y" /* yacc.c:1646  */
+#line 50 "./syntax.y" /* yacc.c:1646  */
     { 
         if ((yyvsp[0])->n_child == 0) {
             (yyval) = make_yylval("Program", yylineno, 1, (yyvsp[0]));
@@ -1480,13 +1482,11 @@ yyreduce:
         }
         if (!errors) {
             /* CP1 */
-            #ifdef DEBUG
-            PrintParserTree((yyval), 0);
-            #endif
+            // PrintParserTree($$, 0);
             /* CP2 */
             SemanticAnalysis((yyval));
             /* CP3 */
-            Translate((yyval));
+            CodeHead = Translate((yyval));
         }
     }
 #line 1493 "./syntax.tab.c" /* yacc.c:1646  */

@@ -4,6 +4,8 @@
 
 int errors;
 
+extern InterCodes CodeHead;
+
 int yylex();
 void yyerror(const char *s);
 struct Node* make_yylval(char* sname, int line, int num, ...);
@@ -53,13 +55,11 @@ Program:
         }
         if (!errors) {
             /* CP1 */
-            #ifdef DEBUG
-            PrintParserTree($$, 0);
-            #endif
+            // PrintParserTree($$, 0);
             /* CP2 */
             SemanticAnalysis($$);
             /* CP3 */
-            Translate($$);
+            CodeHead = Translate($$);
         }
     }
 ;

@@ -4,7 +4,7 @@ SymTable symtable[0x3fff + 1];
 FuncTable FuncHead;
 struct SymTabStack_ symtabstack;
 
-static unsigned int hash(char* name)
+unsigned int hash(char* name)
 {
     unsigned int val = 0, i;
     for (; *name; ++name) {
@@ -26,12 +26,10 @@ void SemanticAnalysis(Node* root)
     assert(root != NULL);
     if (root->n_child == 2) {
         /* ExtDefList := ExtDef ExtDefList */
-        INFO("ExtDefList");
         ExtDefAnalysis(root->child[0]);
         SemanticAnalysis(root->child[1]);
     } else if (root->n_child == 1) {
         /* Program := ExtDefList */
-        INFO("Program");
         InitSA();
         SemanticAnalysis(root->child[0]);
         CheckFuncDefined();
@@ -42,8 +40,6 @@ void ExtDefAnalysis(Node* root)
 {
     assert(root != NULL);
     assert(root->n_child >= 2);
-
-    INFO(root->symbol);
     Node* tmp = root->child[1];
     Type type = SpecAnalysis(root->child[0]);
 
@@ -59,7 +55,6 @@ void ExtDefAnalysis(Node* root)
         FuncTable func = FunDecAnalysis(tmp, type);
         if (!strcmp(root->child[2]->symbol, "CompSt")) {
             /* function definition */
-            INFO("function definition");
             func = AddFuncTab(func, 1);
             /*  analyze the CompSt
                 return_type;
@@ -67,7 +62,6 @@ void ExtDefAnalysis(Node* root)
             CompSTAnalysis(root->child[2], func);
         } else if (!strcmp(root->child[2]->symbol, "SEMI")) {
             /* function declarion */
-            INFO("function declartion");
             AddFuncTab(func, 0);
         } else {
             assert(0);
@@ -84,10 +78,8 @@ void CompSTAnalysis(Node* root, FuncTable func)
 #ifdef LOCAL_SYM
     CreateLocalVar();
 #endif
-    INFO("analyze compst");
     /* add the parameter to symtable */
     if (func != NULL && func->isDefined == 0) {
-        INFO("TO DEFINE");
         FieldList para = func->para;
         while (para) {
             AddSymTab(para->name, para->type, func->lineno);
@@ -114,7 +106,6 @@ void DefListAnalysis(Node* def_list)
 
 void DefAnalysis(Node* def)
 {
-    INFO("to get type");
     Type fund_type = SpecAnalysis(def->child[0]);
     DecListAnalysis(def->child[1], fund_type);
 }
@@ -126,9 +117,7 @@ void DecListAnalysis(Node* root, Type type)
     int dim = 0, *size = (int*)malloc(256 * sizeof(int)), m_size = 256;
     char* name = TraceVarDec(var_dec, &dim, size, &m_size);
     Type ret = ConstArray(type, dim, size, 0);
-    INFO("Begin add local var to symtab");
     AddSymTab(name, ret, dec->line);
-    INFO("Finish add local var to symtab");
     if (dec->n_child == 3) {
         Node* exp = dec->child[2];
         ExpAnalysis(exp);
@@ -159,9 +148,7 @@ void StmtAnalysis(Node* stmt, FuncTable func)
     }
     case 2: {
         /* Exp SEMI */
-        INFO("begin Exp SEMI");
         ExpAnalysis(stmt->child[0]);
-        INFO("end Exp SEMI");
         break;
     }
     case 3: {
@@ -598,7 +585,6 @@ Type CheckFuncCall(char* func_name, FieldList para, int lineno)
     FuncTable temp = FuncHead;
     while (temp->next) {
         temp = temp->next;
-        INFO("to strcmp tow name");
         if (!strcmp(func_name, temp->name)) {
             ret = temp->ret_type;
             if (!CheckFieldEql(para, temp->para)) {
@@ -608,7 +594,6 @@ Type CheckFuncCall(char* func_name, FieldList para, int lineno)
             }
             break;
         }
-        INFO("finish strcmp");
     }
     if (ret == NULL) {
         if (LookupTab(func_name) == NULL) {
@@ -667,7 +652,6 @@ Type SpecAnalysis(Node* spec)
     assert(strcmp(spec->symbol, "Specifier") == 0);
     assert(spec->n_child == 1);
 
-    INFO("sepc analysis");
     Type ret = NULL;
     Node* tmp = spec->child[0];
 
@@ -736,14 +720,11 @@ Type StructSpecAnalysis(Node* struct_spec)
 char* TraceVarDec(Node* var_dec, int* dim, int* size, int* m_size)
 {
     /* to get array or ID */
-    INFO("here");
     char* ret;
     if (var_dec->n_child == 1) {
-        INFO(var_dec->child[0]->ident);
         ret = var_dec->child[0]->ident;
     } else if (var_dec->n_child == 4) {
         if (*dim >= *m_size) {
-            INFO("breakpoint");
             *m_size = *m_size + 256;
             size = (int*)realloc(size, (*m_size) * sizeof(int));
             // fprintf(stderr, "support maximum 256 dimension!\n");
@@ -770,6 +751,29 @@ Type ConstArray(Type fund, int dim, int* size, int level)
     return ret;
 }
 
+int GetSize(Type type)
+{
+    int ret = 0;
+    switch (type->kind) {
+    case BASIC: {
+        ret = 4;
+    } break;
+    case ARRAY: {
+        ret = GetSize(type->u.array.elem) * type->u.array.size;
+    } break;
+    case STRUCTURE: {
+        FieldList member = type->u.structure;
+        while (member) {
+            ret += GetSize(member->type);
+            member = member->next;
+        }
+    } break;
+    default:
+        assert(0);
+    }
+    return ret;
+}
+
 int AddSymTab(char* type_name, Type type, int lineno)
 {
     /*
@@ -780,6 +784,8 @@ int AddSymTab(char* type_name, Type type, int lineno)
         SymTable new_sym = (SymTable)malloc(sizeof(struct SymTable_));
         new_sym->name = strdup(type_name);
         new_sym->type = type;
+        new_sym->op_var = NULL;
+        new_sym->reg_no = -1;
         new_sym->next = symtable[idx];
         symtable[idx] = new_sym;
         if (symtabstack.depth > 0) {
@@ -800,10 +806,8 @@ int AddSymTab(char* type_name, Type type, int lineno)
 
 FuncTable AddFuncTab(FuncTable func, int isDefined)
 {
-    INFO(func->name);
     if (CheckFuncTab(func, isDefined)) {
         /* there is not conflict */
-        INFO("no conflict");
         FuncTable temp = FuncHead;
         while (temp->next) {
             temp = temp->next;
@@ -983,7 +987,6 @@ int CheckFuncTab(FuncTable func, int isDefined)
     while (temp->next) {
         temp = temp->next;
         if (!strcmp(func->name, temp->name)) {
-            INFO("match!");
             if (isDefined & temp->isDefined) {
                 /* has been defined */
                 char msg[128];
@@ -1008,9 +1011,7 @@ int CheckFuncTab(FuncTable func, int isDefined)
 
 int CheckTypeEql(Type t1, Type t2)
 {
-    INFO("check type");
     if ((t1 == NULL && t2 != NULL) || (t1 != NULL && t2 == NULL)) {
-        INFO("NULL type");
         return 0;
     }
     if (t1 == t2) {
@@ -1033,7 +1034,6 @@ int CheckTypeEql(Type t1, Type t2)
 
 int CheckFieldEql(FieldList f1, FieldList f2)
 {
-    INFO("check field");
     if ((f1 == NULL && f2 != NULL) || (f1 != NULL && f2 == NULL)) {
         return 0;
     }
