@@ -196,8 +196,88 @@ InterCodes TranslateStmt(Node* stmt)
     }
 }
 
-InterCodes TranslateExp(Node* exp, Operand place) {
+InterCodes TranslateExp(Node* exp, Operand place)
+{
     TODO()
+    switch (exp->n_child) {
+    case 1: {
+        /* 1 nodes */
+        if (!strcmp(obj->symbol, "ID")) {
+            TODO()
+        } else if (!strcmp(obj->symbol, "INT")) {
+            TODO()
+        } else if (!strcmp(obj->symbol, "FLOAT")) {
+            TODO()
+        } else {
+            assert(0);
+        }
+        break;
+    }
+    case 2: {
+        /* 2 nodes */
+        if (!strcmp(ope->symbol, "MINUS")) {
+            TODO()
+        } else if (!strcmp(ope->symbol, "NOT")) {
+            TODO()
+        } else {
+            assert(0);
+        }
+        break;
+    }
+    case 3: {
+        /* 3 nodes */
+        if (!strcmp(exp->child[2]->symbol, "Exp")) {
+            TODO()
+            if (!strcmp(ope->symbol, "ASSIGNOP")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "AND")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "OR")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "RELOP")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "PLUS")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "MINUS")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "STAR")) {
+                TODO()
+            } else if (!strcmp(ope->symbol, "DIV")) {
+                TODO()
+            } else {
+                assert(0);
+            }
+        } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
+            TODO()
+        } else {
+            /* ID LP RP | LP EXP RP */
+            if (!strcmp(exp->child[0]->symbol, "LP")) {
+                /* LP EXP RP */
+                TODO()
+            } else if (!strcmp(exp->child[0]->symbol, "ID")) {
+                /* ID LP RP  function */
+                TODO()
+            } else {
+                assert(0);
+            }
+        }
+        break;
+    }
+    case 4: {
+        if (!strcmp(exp->child[0]->symbol, "ID")) {
+            /* ID LP Args RP */
+            TODO()
+        } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
+            /* Exp LB Exp RB */
+            TODO()
+        } else {
+            assert(0);
+        }
+        break;
+    }
+    default:
+        assert(0);
+    }
 }
 
 InterCodes TranslateCond(Node* exp, Operand label_true, Operand label_false)
@@ -367,7 +447,5 @@ Operand LookupOpe(char* name)
 
 void InitTranslate()
 {
-    VarNo = 0;
-    TempNo = 0;
-    LabelNo = 0;
+    VarNo = TempNo = LabelNo = 0;
 }
