@@ -327,4 +327,6 @@ InterCodes MakeInterCodesNode();
 
 Operand NewTemp();
 
+Operand NewLabel();
+
 #endif

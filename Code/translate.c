@@ -140,15 +140,58 @@ InterCodes TranslateStmt(Node* stmt)
         /* RETURN Exp SEMI */
         Operand temp = NewTemp();
         InterCodes code1 = TranslateExp(exp->child[1], temp);
-        TODO()
+        InterCodes code2 = MakeInterCodesNode();
+        code2->data->kind = I_RETURN;
+        code2->data->u.ret.x = temp;
+        return JointCodes(code1, code2);
     }
     case 5: {
         /* IF LP Exp RP Stmt */
         /* WHILE LP Exp RP Stmt */
-        TODO()
+        Operand label1 = new_label(), label2 = new_label();
+        if (!strcmp(exp->child[0]->symbol, "IF")) {
+            InterCodes code1 = TranslateCond(exp->child[2], label1, label2);
+            InterCodes code2 = TranslateStmt(exp->child[4]);
+            InterCodes label1_code = MakeInterCodesNode();
+            label1_code->data->kind = I_LABEL;
+            label1_code->data->u.label.x = label1;
+            InterCodes label2_code = MakeInterCodesNode();
+            label2_code->data->kind = I_LABEL;
+            label2_code->data->u.label.x = label2;
+            JointCodes(code1, label1_code);
+            JointCodes(code2, label2_code);
+            return JointCodes(code1, code2);
+        } else if (!strcmp(exp->child[0]->symbol, "WHILE")) {
+            Operand label3 = new_label();
+            InterCodes code1 = TranslateCond(exp->child[2], label2, label3);
+            InterCodes code2 = TranslateStmt(exp->child[4]);
+            InterCodes label1_code = MakeInterCodesNode();
+            label1_code->data->kind = I_LABEL;
+            label1_code->data->u.label.x = label1;
+            InterCodes label2_code = MakeInterCodesNode();
+            label2_code->data->kind = I_LABEL;
+            label2_code->data->u.label.x = label2;
+            InterCodes label3_code = MakeInterCodesNode();
+            label3_code->data->kind = I_LABEL;
+            label3_code->data->u.label.x = label3;
+            InterCodes goto_code = MakeInterCodesNode();
+            goto_code->data->kind = I_JMP;
+            goto_code->data->u.jmp.x = label1;
+            JointCodes(goto_code, label3_code);
+            JointCodes(code2, goto_code);
+            JointCodes(label2_code, code2);
+            JointCodes(code1, label2_code);
+            return JointCodes(label1_code, code1);
+        } else {
+            assert(0);
+        }
     }
     case 7: {
         /* IF LP Exp RP Stmt ELSE Stmt */
+        Operand label1 = new_label(), label2 = new_label(), label3 = new_label();
+        InterCodes code1 = TranslateCond(exp->child[2], label1, label2);
+        InterCodes code2 = TranslateStmt(exp->child[4]);
+        InterCodes code3 = TranslateStmt(exp->child[6]);
         TODO()
     }
     default:
@@ -191,6 +234,14 @@ Operand NewTemp()
     temp->kind = OP_TEMP;
     temp->u.var_no = ++TempNo;
     return temp;
+}
+
+Operand NewLabel()
+{
+    Operand label = (Operand)malloc(sizeof(struct Operand_));
+    label->kind = OP_LABEL;
+    label->u.var_no = ++LabelNo;
+    return label;
 }
 
 Operand LookupOpe(char* name)
