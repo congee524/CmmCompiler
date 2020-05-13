@@ -231,6 +231,15 @@ struct ArgList_ {
     struct ArgList_* prev;
 };
 
+typedef enum RELOP_TYPE {
+    GEQ = 0, /* >= */
+    LEQ, /* <= */
+    GE, /* > */
+    LE, /* < */
+    EQ, /* == */
+    NEQ /* != */
+} RELOP_TYPE;
+
 struct InterCode_ {
     enum {
         I_LABEL = 0, /* LABEL x: */
@@ -274,14 +283,7 @@ struct InterCode_ {
             Operand x;
         } dec;
         struct {
-            enum {
-                GEQ, /* >= */
-                LEQ, /* <= */
-                GE, /* > */
-                LE, /* < */
-                EQ, /* == */
-                NEQ /* != */
-            } relop;
+            RELOP_TYPE relop;
             Operand x, y, z;
         } jmp_if;
     } u;
@@ -319,14 +321,22 @@ InterCodes TranslateStmt(Node* stmt);
 
 InterCodes TranslateExp(Node* exp, Operand place);
 
+InterCodes TranslateCond(Node* exp, Operand label_true, Operand label_false);
+
 Operand LookupOpe(char* name);
 
 InterCodes JointCodes(InterCodes code1, InterCodes code2);
 
 InterCodes MakeInterCodesNode();
 
+RELOP_TYPE GetRelop(Node* relop);
+
+InterCodes GotoCode(Operand label);
+
+InterCodes LabelCode(Operand label);
+
 Operand NewTemp();
 
-Operand NewLabel();
+Operand NewLabel()();
 
 #endif

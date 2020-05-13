@@ -148,35 +148,23 @@ InterCodes TranslateStmt(Node* stmt)
     case 5: {
         /* IF LP Exp RP Stmt */
         /* WHILE LP Exp RP Stmt */
-        Operand label1 = new_label(), label2 = new_label();
+        Operand label1 = NewLabel(), label2 = NewLabel();
         if (!strcmp(exp->child[0]->symbol, "IF")) {
             InterCodes code1 = TranslateCond(exp->child[2], label1, label2);
             InterCodes code2 = TranslateStmt(exp->child[4]);
-            InterCodes label1_code = MakeInterCodesNode();
-            label1_code->data->kind = I_LABEL;
-            label1_code->data->u.label.x = label1;
-            InterCodes label2_code = MakeInterCodesNode();
-            label2_code->data->kind = I_LABEL;
-            label2_code->data->u.label.x = label2;
-            JointCodes(code1, label1_code);
+            InterCodes label1_code = LabelCode(label1);
+            InterCodes label2_code = LabelCode(label2);
             JointCodes(code2, label2_code);
-            return JointCodes(code1, code2);
+            JointCodes(label1_code, code2);
+            return JointCodes(code1, label1_code);
         } else if (!strcmp(exp->child[0]->symbol, "WHILE")) {
-            Operand label3 = new_label();
+            Operand label3 = NewLabel();
             InterCodes code1 = TranslateCond(exp->child[2], label2, label3);
             InterCodes code2 = TranslateStmt(exp->child[4]);
-            InterCodes label1_code = MakeInterCodesNode();
-            label1_code->data->kind = I_LABEL;
-            label1_code->data->u.label.x = label1;
-            InterCodes label2_code = MakeInterCodesNode();
-            label2_code->data->kind = I_LABEL;
-            label2_code->data->u.label.x = label2;
-            InterCodes label3_code = MakeInterCodesNode();
-            label3_code->data->kind = I_LABEL;
-            label3_code->data->u.label.x = label3;
-            InterCodes goto_code = MakeInterCodesNode();
-            goto_code->data->kind = I_JMP;
-            goto_code->data->u.jmp.x = label1;
+            InterCodes label1_code = LabelCode(label1);
+            InterCodes label2_code = LabelCode(label2);
+            InterCodes label3_code = LabelCode(label3);
+            InterCodes goto_code = GotoCode(label1);
             JointCodes(goto_code, label3_code);
             JointCodes(code2, goto_code);
             JointCodes(label2_code, code2);
@@ -188,11 +176,20 @@ InterCodes TranslateStmt(Node* stmt)
     }
     case 7: {
         /* IF LP Exp RP Stmt ELSE Stmt */
-        Operand label1 = new_label(), label2 = new_label(), label3 = new_label();
+        Operand label1 = NewLabel(), label2 = NewLabel(), label3 = NewLabel();
         InterCodes code1 = TranslateCond(exp->child[2], label1, label2);
         InterCodes code2 = TranslateStmt(exp->child[4]);
         InterCodes code3 = TranslateStmt(exp->child[6]);
-        TODO()
+        InterCodes label1_code = LabelCode(label1);
+        InterCodes label2_code = LabelCode(label2);
+        InterCodes label3_code = LabelCode(label3);
+        InterCodes goto_code = GotoCode(label3);
+        JointCodes(code3, label3_code);
+        JointCodes(label2_code, code3);
+        JointCodes(goto_code, label2_code);
+        JointCodes(code2, goto_code);
+        JointCodes(label1_code, code2);
+        return JointCodes(code1, label1_code);
     }
     default:
         assert(0);
@@ -201,6 +198,60 @@ InterCodes TranslateStmt(Node* stmt)
 
 InterCodes TranslateExp(Node* exp, Operand place) {
     TODO()
+}
+
+InterCodes TranslateCond(Node* exp, Operand label_true, Operand label_false)
+{
+    if (exp->n_child == 2 && !strcmp(exp->child[0]->symbol, "NOT")) {
+        /* NOT Exp */
+        return TranslateCond(exp->child[1], label_false, label_true);
+    }
+    if (exp->n_child == 3) {
+        if (!strcmp(exp->child[1]->symbol, "RELOP")) {
+            /* Exp RELOP Exp */
+            Operand t1 = NewTemp(), t2 = NewTemp();
+            InterCodes code1 = TranslateExp(exp->child[0], t1);
+            InterCodes code2 = TranslateExp(exp->child[2], t2);
+            InterCodes code3 = MakeInterCodesNode();
+            code3->data->kind = I_JMP_IF;
+            code3->data->u.jmp_if.x = t1;
+            code3->data->u.jmp_if.y = t2;
+            code3->data->u.jmp_if.z = label_true;
+            code3->data->u.jmp_if.relop = GetRelop(exp->child[1]);
+            InterCodes goto_code = GotoCode(label_false);
+            JointCodes(code3, goto_code);
+            JointCodes(code2, code3);
+            return JointCodes(code1, code2);
+        } else if (!strcmp(exp->child[1]->symbol, "AND")) {
+            /* Exp AND Exp */
+            Operand label1 = NewLabel();
+            InterCodes code1 = TranslateCond(exp->child[0], label1, label_false);
+            InterCodes code2 = TranslateCond(exp->child[2], label_true, label_false);
+            InterCodes label1_code = LabelCode(label1);
+            JointCodes(label1_code, code2);
+            return JointCodes(code1, label1_code);
+        } else if (!strcmp(exp->child[1]->symbol, "OR")) {
+            Operand label1 = NewLabel();
+            InterCodes code1 = TranslateCond(exp->child[0], label_true, label1);
+            InterCodes code2 = TranslateCond(exp->child[2], label_true, label_false);
+            InterCodes label1_code = LabelCode(label1);
+            JointCodes(label1_code, code2);
+            return JointCodes(code1, label1_code);
+        }
+    }
+    Operand t1 = NewTemp();
+    InterCodes code1 = TranslateExp(exp, t1);
+    InterCodes code2 = MakeInterCodesNode();
+    code2->data->kind = I_JMP_IF;
+    code2->data->u.jmp_if.x = t1;
+    code2->data->u.jmp_if.y = malloc(sizeof(struct Operand_));
+    code2->data->u.jmp_if.y->kind = OP_CONST_INT;
+    code2->data->u.jmp_if.y->u.value = 0;
+    code2->data->u.jmp_if.z = label_true;
+    code2->data->u.jmp_if.relop = NEQ;
+    InterCodes goto_code = GotoCode(label_false);
+    JointCodes(code2, goto_code);
+    return JointCodes(code1, code2);
 }
 
 InterCodes JointCodes(InterCodes code1, InterCodes code2)
@@ -242,6 +293,43 @@ Operand NewLabel()
     label->kind = OP_LABEL;
     label->u.var_no = ++LabelNo;
     return label;
+}
+
+InterCodes GotoCode(Operand label)
+{
+    InterCodes goto_code = MakeInterCodesNode();
+    goto_code->data->kind = I_JMP;
+    goto_code->data->u.jmp.x = label;
+    return goto_code;
+}
+
+InterCodes LabelCode(Operand label)
+{
+    InterCodes label_code = MakeInterCodesNode();
+    label_code->kind = I_LABEL;
+    label_code->u.label.x = label;
+    return label_code;
+}
+
+RELOP_TYPE GetRelop(Node* relop)
+{
+    assert(strcmp(relop->symbol, "RELOP") == 0);
+    char* ident = relop->ident;
+    if (!strcmp(ident, ">=")) {
+        return GEQ;
+    } else if (!strcmp(ident, "<=")) {
+        return LEQ;
+    } else if (!strcmp(ident, ">")) {
+        return GE;
+    } else if (!strcmp(ident, "<")) {
+        return LE;
+    } else if (!strcmp(ident, "==")) {
+        return EQ;
+    } else if (!strcmp(ident, "!=")) {
+        return NEQ;
+    }
+    INFO("match failed!");
+    assert(0);
 }
 
 Operand LookupOpe(char* name)
