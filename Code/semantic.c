@@ -82,7 +82,8 @@ void CompSTAnalysis(Node* root, FuncTable func)
     if (func != NULL && func->isDefined == 0) {
         FieldList para = func->para;
         while (para) {
-            AddSymTab(para->name, para->type, func->lineno);
+            SymTable new_sym = AddSymTab(para->name, para->type, func->lineno);
+            new_sym->isParam = 1;
             para = para->next;
         }
         func->isDefined = 1;
@@ -347,7 +348,7 @@ void ExpAnalysis(Node* exp)
             /* variable */
             ExpNode eval = exp->eval;
             eval->isRight = 0;
-            eval->type = LookupTab(obj->ident);
+            eval->type = LookupTab(obj->ident)->type;
             if (eval->type == NULL || (eval->type->kind == STRUCTURE && !strcmp(obj->ident, eval->type->u.struct_name))) {
                 char msg[128];
                 sprintf(msg, "Variable \"%s\" has not been defined", obj->ident);
@@ -774,7 +775,7 @@ int GetSize(Type type)
     return ret;
 }
 
-int AddSymTab(char* type_name, Type type, int lineno)
+SymTable AddSymTab(char* type_name, Type type, int lineno)
 {
     /*
         symtab store the global variables and structure
@@ -785,7 +786,7 @@ int AddSymTab(char* type_name, Type type, int lineno)
         new_sym->name = strdup(type_name);
         new_sym->type = type;
         new_sym->op_var = NULL;
-        new_sym->reg_no = -1;
+        new_sym->isParam = 0;
         new_sym->next = symtable[idx];
         symtable[idx] = new_sym;
         if (symtabstack.depth > 0) {
@@ -799,9 +800,9 @@ int AddSymTab(char* type_name, Type type, int lineno)
             temp->var = new_sym;
             temp->next = NULL;
         }
-        return 1;
+        return new_sym;
     }
-    return 0;
+    return NULL;
 }
 
 FuncTable AddFuncTab(FuncTable func, int isDefined)
@@ -876,7 +877,7 @@ Type GetStruct(char* name)
     return NULL;
 }
 
-Type LookupTab(char* name)
+SymTable LookupTab(char* name)
 {
     /* if find symbol failed, return NULL */
     Type ret = NULL;
@@ -884,7 +885,7 @@ Type LookupTab(char* name)
     SymTable temp = symtable[idx];
     while (temp) {
         if (!strcmp(temp->name, name)) {
-            ret = temp->type;
+            ret = temp;
             break;
         }
         temp = temp->next;

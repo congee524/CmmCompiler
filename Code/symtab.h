@@ -72,8 +72,8 @@ typedef struct Node {
 struct SymTable_ {
     char* name;
     Type type;
+    int isParam;
     Operand op_var;
-    int reg_no;
     SymTable next;
 };
 
@@ -171,13 +171,13 @@ void CreateLocalVar();
 
 void DeleteLocalVar();
 
-int AddSymTab(char* type_name, Type type, int lineno);
+SymTable AddSymTab(char* type_name, Type type, int lineno);
 
 FuncTable AddFuncTab(FuncTable func, int isDefined);
 
 int AddStructList(Type structure, int lineno);
 
-Type LookupTab(char* name);
+SymTable LookupTab(char* name);
 
 Type GetStruct(char* name);
 
@@ -325,6 +325,8 @@ InterCodes TranslateCond(Node* exp, Operand label_true, Operand label_false);
 
 Operand LookupOpe(char* name);
 
+Operand GetLVal(Node* exp, int* offsite);
+
 InterCodes JointCodes(InterCodes code1, InterCodes code2);
 
 InterCodes MakeInterCodesNode();
@@ -337,6 +339,10 @@ InterCodes LabelCode(Operand label);
 
 Operand NewTemp();
 
-Operand NewLabel()();
+Operand NewLabel();
+
+Operand NewConstInt(int ival);
+
+Operand NewConstFloat(float fval);
 
 #endif
