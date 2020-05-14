@@ -323,9 +323,13 @@ InterCodes TranslateExp(Node* exp, Operand place);
 
 InterCodes TranslateCond(Node* exp, Operand label_true, Operand label_false);
 
+InterCodes TranslateArgs(Node* args, ArgList arg_list);
+
+void AddArgs(ArgList arg_list, Operand t1);
+
 Operand LookupOpe(char* name);
 
-Operand GetLVal(Node* exp, int* offsite);
+InterCodes GetArrayAddr(Node* exp, Operand addr);
 
 InterCodes JointCodes(InterCodes code1, InterCodes code2);
 
