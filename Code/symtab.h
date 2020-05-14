@@ -271,13 +271,13 @@ struct InterCode_ {
         } func;
         struct {
             Operand x, y;
-        } assign, addr, defer_r, defer_l;
+        } assign, addr, deref_r, deref_l;
         struct {
             Operand x, f;
         } call;
         struct {
             Operand x, y, z;
-        } add, sub, mul, div;
+        } add, sub, mul, div, binop;
         struct {
             int size;
             Operand x;

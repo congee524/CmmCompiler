@@ -775,6 +775,18 @@ int GetSize(Type type)
     return ret;
 }
 
+int GetStructMemOff(Type type, char* name)
+{
+    assert(type->kind == STRUCTURE);
+    FieldList member = type->u.structure;
+    int offsite = 0;
+    while (member && strcmp(member->name, name)) {
+        offsite += GetSize(member->type);
+        member = member->next;
+    }
+    return offsite;
+}
+
 SymTable AddSymTab(char* type_name, Type type, int lineno)
 {
     /*
