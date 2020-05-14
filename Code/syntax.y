@@ -2,7 +2,7 @@
 // #include "symtab.h"
 #include "lex.yy.c"
 
-int errors;
+extern int errors, yylineno;
 
 extern InterCodes CodeHead;
 
@@ -60,6 +60,7 @@ Program:
             SemanticAnalysis($$);
             /* CP3 */
             CodeHead = Translate($$);
+            IRGen(CodeHead);
         }
     }
 ;

@@ -4,8 +4,7 @@
 
 #define TOKEN(t) (yylval->token = t)
 
-extern int errors;
-int yycolumn = 1;
+int yycolumn = 1, errors = 0;
 
 #define YY_USER_ACTION \
     yylloc.first_line = yylloc.last_line = yylineno; \

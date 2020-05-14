@@ -1,32 +1,29 @@
 #include <stdio.h>
 
-// #define DEBUG
-// #define MUL_FILE
-
-extern int yylineno, yycolumn, errors;
+FILE *fin, *fout;
+extern int yylineno;
 extern int yylex_destroy(void);
 extern int yyparse();
 extern void yyrestart(FILE* s);
 
 int main(int argc, char** argv)
 {
-    if (argc <= 1) {
+    if (argc != 3) {
+        fprintf(stdout, "input format: ./parser test1 out1.ir\n");
         return 1;
     }
-    for (int i = 1; i < argc; i++) {
-#ifdef MUL_FILE
-        printf("\nFILE: %s\n", argv[i]);
-#endif
-        FILE* f = fopen(argv[i], "r");
-        if (!f) {
-            perror(argv[1]);
-            return 1;
-        }
-        yyrestart(f);
-        yylineno = 1, yycolumn = 1, errors = 0;
-        ;
-        yyparse();
-        yylex_destroy();
+    fin = fopen(argv[1], "r"), fout = fopen(argv[2], "w");
+    if (!fin) {
+        perror(argv[1]);
+        return 1;
     }
+    if (!fout) {
+        perror(argv[2]);
+        return 1;
+    }
+    yylineno = 1;
+    yyrestart(fin);
+    yyparse();
+    yylex_destroy();
     return 0;
 }

@@ -2,3 +2,4 @@ Code/parse
 Code/scanner
 **/*.output
 compilers-tests/
+**/*.ir

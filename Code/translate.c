@@ -32,18 +32,14 @@ InterCodes TranslateExtDef(Node* ext_def)
 InterCodes TranslateFunDec(Node* fun_dec)
 {
     InterCodes func_node = MakeInterCodesNode();
-    InterCode func = func_node->data;
-    func->kind = I_FUNC;
-
-    func->u.func.f = (Operand)malloc(sizeof(struct Operand_));
-    func->u.func.f->kind = OP_FUNC;
-    func->u.func.f->u.id = strdup(fun_dec->child[0]->ident);
+    func_node->data->kind = I_FUNC;
+    func_node->data->u.func.f = LookupOpe(fun_dec->child[0]->ident);
 
     InterCodes param_list = NULL;
     if (fun_dec->n_child == 4) {
         param_list = TranslateVarList(fun_dec->child[2]);
     }
-    return JointCodes(func, param_list);
+    return JointCodes(func_node, param_list);
 }
 
 InterCodes TranslateVarList(Node* var_list)
@@ -80,12 +76,16 @@ InterCodes TranslateCompSt(Node* comp_st)
 InterCodes TranslateDefList(Node* def_list)
 {
     if (def_list->n_child == 0) {
-        return NULL:
+        return NULL;
     }
     Node* dec_list = def_list->child[0]->child[1];
     InterCodes def_code = TranslateDecList(dec_list);
     InterCodes def_list_code = TranslateDefList(def_list->child[1]);
-    return JointCodes(def_code, def_list_code);
+    if (def_code == NULL && def_list_code == NULL) {
+        return NULL;
+    } else {
+        return JointCodes(def_code, def_list_code);
+    }
 }
 
 InterCodes TranslateDecList(Node* dec_list)
@@ -95,7 +95,11 @@ InterCodes TranslateDecList(Node* dec_list)
     if (dec_list->n_child == 3) {
         dec_list_code = TranslateDecList(dec_list->child[2]);
     }
-    return JointCodes(dec_code, dec_list_code);
+    if (dec_code == NULL && dec_list_code == NULL) {
+        return NULL;
+    } else {
+        return JointCodes(dec_code, dec_list_code);
+    }
 }
 
 InterCodes TranslateDec(Node* dec)
@@ -142,16 +146,17 @@ InterCodes TranslateStmt(Node* stmt)
     switch (stmt->n_child) {
     case 1: {
         /* CompST */
-        return TranslateCompST(stmt->child[0]);
+        return TranslateCompSt(stmt->child[0]);
     }
     case 2: {
         /* Exp SEMI */
-        return TranslateExp(stmt->child[0]);
+        Operand t1 = NewTemp();
+        return TranslateExp(stmt->child[0], t1);
     }
     case 3: {
         /* RETURN Exp SEMI */
         Operand temp = NewTemp();
-        InterCodes code1 = TranslateExp(exp->child[1], temp);
+        InterCodes code1 = TranslateExp(stmt->child[1], temp);
         InterCodes code2 = MakeInterCodesNode();
         code2->data->kind = I_RETURN;
         code2->data->u.ret.x = temp;
@@ -161,18 +166,18 @@ InterCodes TranslateStmt(Node* stmt)
         /* IF LP Exp RP Stmt */
         /* WHILE LP Exp RP Stmt */
         Operand label1 = NewLabel(), label2 = NewLabel();
-        if (!strcmp(exp->child[0]->symbol, "IF")) {
-            InterCodes code1 = TranslateCond(exp->child[2], label1, label2);
-            InterCodes code2 = TranslateStmt(exp->child[4]);
+        if (!strcmp(stmt->child[0]->symbol, "IF")) {
+            InterCodes code1 = TranslateCond(stmt->child[2], label1, label2);
+            InterCodes code2 = TranslateStmt(stmt->child[4]);
             InterCodes label1_code = LabelCode(label1);
             InterCodes label2_code = LabelCode(label2);
             JointCodes(code2, label2_code);
             JointCodes(label1_code, code2);
             return JointCodes(code1, label1_code);
-        } else if (!strcmp(exp->child[0]->symbol, "WHILE")) {
+        } else if (!strcmp(stmt->child[0]->symbol, "WHILE")) {
             Operand label3 = NewLabel();
-            InterCodes code1 = TranslateCond(exp->child[2], label2, label3);
-            InterCodes code2 = TranslateStmt(exp->child[4]);
+            InterCodes code1 = TranslateCond(stmt->child[2], label2, label3);
+            InterCodes code2 = TranslateStmt(stmt->child[4]);
             InterCodes label1_code = LabelCode(label1);
             InterCodes label2_code = LabelCode(label2);
             InterCodes label3_code = LabelCode(label3);
@@ -189,9 +194,9 @@ InterCodes TranslateStmt(Node* stmt)
     case 7: {
         /* IF LP Exp RP Stmt ELSE Stmt */
         Operand label1 = NewLabel(), label2 = NewLabel(), label3 = NewLabel();
-        InterCodes code1 = TranslateCond(exp->child[2], label1, label2);
-        InterCodes code2 = TranslateStmt(exp->child[4]);
-        InterCodes code3 = TranslateStmt(exp->child[6]);
+        InterCodes code1 = TranslateCond(stmt->child[2], label1, label2);
+        InterCodes code2 = TranslateStmt(stmt->child[4]);
+        InterCodes code3 = TranslateStmt(stmt->child[6]);
         InterCodes label1_code = LabelCode(label1);
         InterCodes label2_code = LabelCode(label2);
         InterCodes label3_code = LabelCode(label3);
@@ -231,7 +236,8 @@ InterCodes TranslateExp(Node* exp, Operand place)
             InterCodes code = MakeInterCodesNode();
             code->data->kind = I_ASSIGN;
             code->data->u.assign.x = place;
-            code->data->u.assign.y = NewConstFloat(obj->fval) return code;
+            code->data->u.assign.y = NewConstFloat(obj->fval);
+            return code;
         } else {
             assert(0);
         }
@@ -283,7 +289,7 @@ InterCodes TranslateExp(Node* exp, Operand place)
                 Operand t1 = NewTemp();
                 InterCodes code1 = TranslateExp(exp2, t1);
                 if (exp1->n_child == 1
-                    && !strcmp(exp1->child[0], "ID")) {
+                    && !strcmp(exp1->child[0]->symbol, "ID")) {
                     /* variable */
                     Operand variable = LookupOpe(exp1->child[0]->ident);
                     InterCodes code2 = MakeInterCodesNode();
@@ -322,7 +328,7 @@ InterCodes TranslateExp(Node* exp, Operand place)
                             id = id->child[0];
                         }
                         Type type = LookupTab(id->child[0]->ident)->type;
-                        Operand off = NewConstInt(GetStructMemOff(exp1->child[2]->ident));
+                        Operand off = NewConstInt(GetStructMemOff(type, exp1->child[2]->ident));
                         InterCodes code3 = MakeInterCodesNode();
                         code1->data->kind = I_ADD;
                         code1->data->u.add.x = addr;
@@ -342,7 +348,8 @@ InterCodes TranslateExp(Node* exp, Operand place)
                         return JointCodes(code1, code2);
                     } else {
                         /* (ID) DOT ID: structure variable */
-                        Operand off = NewConstInt(GetStructMemOff(exp1->child[2]->ident));
+                        Type type = LookupTab(exp1->child[0]->child[0]->ident)->type;
+                        Operand off = NewConstInt(GetStructMemOff(type, exp1->child[2]->ident));
                         Operand addr = LookupOpe(exp1->child[0]->ident);
                         InterCodes code2 = MakeInterCodesNode();
                         code2->data->kind = I_ADD;
@@ -389,13 +396,13 @@ InterCodes TranslateExp(Node* exp, Operand place)
                 code3->data->u.binop.y = t1;
                 code3->data->u.binop.z = t2;
                 if (!strcmp(ope->symbol, "PLUS")) {
-                    code3->data->u.kind = I_ADD;
+                    code3->data->kind = I_ADD;
                 } else if (!strcmp(ope->symbol, "MINUS")) {
-                    code3->data->u.kind = I_SUB;
+                    code3->data->kind = I_SUB;
                 } else if (!strcmp(ope->symbol, "STAR")) {
-                    code3->data->u.kind = I_MUL;
+                    code3->data->kind = I_MUL;
                 } else if (!strcmp(ope->symbol, "DIV")) {
-                    code3->data->u.kind = I_DIV;
+                    code3->data->kind = I_DIV;
                 }
                 JointCodes(code2, code3);
                 return JointCodes(code1, code2);
@@ -412,7 +419,7 @@ InterCodes TranslateExp(Node* exp, Operand place)
                     id = id->child[0];
                 }
                 Type type = LookupTab(id->child[0]->ident)->type;
-                Operand off = NewConstInt(GetStructMemOff(exp1->child[2]->ident));
+                Operand off = NewConstInt(GetStructMemOff(type, exp1->child[2]->ident));
                 InterCodes code2 = MakeInterCodesNode();
                 code2->data->kind = I_ADD;
                 code2->data->u.add.x = addr;
@@ -426,7 +433,8 @@ InterCodes TranslateExp(Node* exp, Operand place)
                 return JointCodes(code1, code2);
             } else {
                 /* (ID) DOT ID: structure variable */
-                Operand off = NewConstInt(GetStructMemOff(exp1->child[2]->ident));
+                Type type = LookupTab(exp1->child[0]->ident)->type;
+                Operand off = NewConstInt(GetStructMemOff(type, exp1->child[2]->ident));
                 Operand addr = LookupOpe(exp1->child[0]->ident);
                 InterCodes code1 = MakeInterCodesNode();
                 code1->data->kind = I_ADD;
@@ -490,7 +498,7 @@ InterCodes TranslateExp(Node* exp, Operand place)
             InterCodes code2 = MakeInterCodesNode();
             code2->data->kind = I_CALL;
             code2->data->u.call.f = func;
-            code2->data->u.call.x = palce;
+            code2->data->u.call.x = place;
             return JointCodes(code1, code2);
         } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
             /* Exp LB Exp RB */
@@ -555,9 +563,7 @@ InterCodes TranslateCond(Node* exp, Operand label_true, Operand label_false)
     InterCodes code2 = MakeInterCodesNode();
     code2->data->kind = I_JMP_IF;
     code2->data->u.jmp_if.x = t1;
-    code2->data->u.jmp_if.y = malloc(sizeof(struct Operand_));
-    code2->data->u.jmp_if.y->kind = OP_CONST_INT;
-    code2->data->u.jmp_if.y->u.value = 0;
+    code2->data->u.jmp_if.y = NewConstInt(0);
     code2->data->u.jmp_if.z = label_true;
     code2->data->u.jmp_if.relop = NEQ;
     InterCodes goto_code = GotoCode(label_false);
@@ -572,7 +578,7 @@ InterCodes TranslateArgs(Node* args, ArgList arg_list)
     InterCodes code1 = TranslateExp(args->child[0], t1);
     AddArgs(arg_list, t1);
     if (args->n_child == 3) {
-        InterCodes code2 = TranslateExp(args->child[2], arg_list);
+        InterCodes code2 = TranslateArgs(args->child[2], arg_list);
         return JointCodes(code1, code2);
     }
     return code1;
@@ -621,26 +627,22 @@ InterCodes GetArrayAddr(Node* exp, Operand addr)
     code1->data->u.assign.x = addr;
     code1->data->u.assign.y = fund_array->op_var;
     ret = JointCodes(ret, code1);
-    InterCodes temp = NULL, temp_add = NULL;
+    InterCodes temp_mul = NULL, temp_add = NULL;
     for (int i = 0; i < dim; i++) {
-        temp = MakeInterCodesNode();
-        temp->data->kind = I_MUL;
-        temp->data->u.mul.x = off[i];
-        temp->data->u.mul.y = off[i];
-        temp->data->u.mul.z = NewConstInt(len[i]);
+        temp_mul = MakeInterCodesNode();
+        temp_mul->data->kind = I_MUL;
+        temp_mul->data->u.mul.x = off[i];
+        temp_mul->data->u.mul.y = off[i];
+        temp_mul->data->u.mul.z = NewConstInt(len[i]);
         temp_add = MakeInterCodesNode();
         temp_add->data->kind = I_ADD;
         temp_add->data->u.add.x = addr;
         temp_add->data->u.add.y = addr;
         temp_add->data->u.add.z = off[i];
-        JointCodes(temp, temp_add);
-        JointCodes(code1, temp);
+        JointCodes(temp_mul, temp_add);
+        JointCodes(code1, temp_mul);
     }
     return ret;
-}
-
-char* TraceArray(Node* exp, int* offsite)
-{
 }
 
 InterCodes JointCodes(InterCodes code1, InterCodes code2)
@@ -693,7 +695,7 @@ Operand NewConstInt(int ival)
 {
     Operand temp_int = (Operand)malloc(sizeof(struct Operand_));
     temp_int->kind = OP_CONST_INT;
-    temp_int->value = ival;
+    temp_int->u.value = ival;
     return temp_int;
 }
 
@@ -701,7 +703,7 @@ Operand NewConstFloat(float fval)
 {
     Operand temp_float = (Operand)malloc(sizeof(struct Operand_));
     temp_float->kind = OP_CONST_FLOAT;
-    temp_float->fval = fval;
+    temp_float->u.fval = fval;
     return temp_float;
 }
 
@@ -716,30 +718,30 @@ InterCodes GotoCode(Operand label)
 InterCodes LabelCode(Operand label)
 {
     InterCodes label_code = MakeInterCodesNode();
-    label_code->kind = I_LABEL;
-    label_code->u.label.x = label;
+    label_code->data->kind = I_LABEL;
+    label_code->data->u.label.x = label;
     return label_code;
 }
 
 RELOP_TYPE GetRelop(Node* relop)
 {
     assert(strcmp(relop->symbol, "RELOP") == 0);
-    char* ident = relop->ident;
-    if (!strcmp(ident, ">=")) {
-        return GEQ;
-    } else if (!strcmp(ident, "<=")) {
-        return LEQ;
-    } else if (!strcmp(ident, ">")) {
+    switch (relop->ival) {
+    case 0: /* > */
         return GE;
-    } else if (!strcmp(ident, "<")) {
+    case 1: /* < */
         return LE;
-    } else if (!strcmp(ident, "==")) {
+    case 2: /* >= */
+        return GEQ;
+    case 3: /* <= */
+        return LEQ;
+    case 4: /* == */
         return EQ;
-    } else if (!strcmp(ident, "!=")) {
+    case 5: /* != */
         return NEQ;
+    default:
+        assert(0);
     }
-    INFO("match failed!");
-    assert(0);
 }
 
 Operand LookupOpe(char* name)
@@ -761,19 +763,20 @@ Operand LookupOpe(char* name)
     }
 
     /* the symbol is a function */
-    Operand ret = NULL;
-    FuncTable temp = FuncHead;
-    while (temp->next) {
-        temp = temp->next;
-        if (!strcmp(temp->name, name)) {
-            ret = (Operand)malloc(sizeof(struct Operand_));
-            ret->kind = OP_FUNC;
-            ret->u.id = strdup(name);
-            break;
+    FuncTable temp_func = FuncHead;
+    while (temp_func->next) {
+        temp_func = temp_func->next;
+        if (!strcmp(temp_func->name, name)) {
+            if (temp_func->op_func == NULL) {
+                temp_func->op_func = (Operand)malloc(sizeof(struct Operand_));
+                temp_func->op_func->kind = OP_FUNC;
+                temp_func->op_func->u.id = strdup(name);
+            }
+            return temp_func->op_func;
         }
     }
-    assert(ret != NULL);
-    return ret;
+    assert(0);
+    return NULL;
 }
 
 void InitTranslate()

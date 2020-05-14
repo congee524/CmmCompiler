@@ -289,6 +289,7 @@ FuncTable FunDecAnalysis(Node* root, Type type)
     ret->lineno = root->child[0]->line;
     ret->ret_type = type;
     ret->isDefined = 0;
+    ret->op_func = NULL;
     ret->next = NULL;
 
     /* check parameter */
@@ -892,7 +893,7 @@ Type GetStruct(char* name)
 SymTable LookupTab(char* name)
 {
     /* if find symbol failed, return NULL */
-    Type ret = NULL;
+    SymTable ret = NULL;
     unsigned int idx = hash(name);
     SymTable temp = symtable[idx];
     while (temp) {
@@ -1079,6 +1080,7 @@ void InitSA()
     read->name = strdup("read");
     read->ret_type = temp_type;
     read->isDefined = 1;
+    read->op_func = NULL;
     read->para = NULL;
     read->next = NULL;
     AddFuncTab(read, 1);
@@ -1089,6 +1091,7 @@ void InitSA()
     write->isDefined = 1;
     write->para = (FieldList)malloc(sizeof(struct FieldList_));
     write->para->type = temp_type;
+    write->op_func = NULL;
     write->para->next = NULL;
     write->next = NULL;
     AddFuncTab(write, 1);

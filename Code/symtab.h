@@ -46,6 +46,8 @@ typedef struct InterCodes_* InterCodes;
 
 unsigned int hash(char* name);
 
+extern FILE *fin, *fout;
+
 /*============= semantic =============*/
 
 struct ExpNode_ {
@@ -82,6 +84,7 @@ struct FuncTable_ {
     int lineno;
     Type ret_type;
     FieldList para;
+    Operand op_func;
     int isDefined;
     FuncTable next;
 };
@@ -183,6 +186,8 @@ Type GetStruct(char* name);
 
 int GetSize(Type type);
 
+int GetStructMemOff(Type type, char* name);
+
 int CheckSymTab(char* sym_name, Type type, int lineno);
 
 int CheckFuncTab(FuncTable func, int isDefined);
@@ -213,7 +218,7 @@ struct Operand_ {
         OP_VAR,
         OP_CONST_INT,
         OP_CONST_FLOAT,
-        op_ADDR,
+        OP_ADDR,
         OP_LABEL,
         OP_FUNC
     } kind;
@@ -260,7 +265,7 @@ struct InterCode_ {
         I_CALL, /* x := CALL f */
         I_PARAM, /* PARAM x */
         I_READ, /* READ x */
-        I_WRITE /* WRITE */
+        I_WRITE /* WRITE x */
     } kind;
     union {
         struct {
@@ -271,7 +276,7 @@ struct InterCode_ {
         } func;
         struct {
             Operand x, y;
-        } assign, addr, deref_r, deref_l;
+        } assign, addr, deref_r, deref_l, unary;
         struct {
             Operand x, f;
         } call;
@@ -331,6 +336,8 @@ Operand LookupOpe(char* name);
 
 InterCodes GetArrayAddr(Node* exp, Operand addr);
 
+void InitTranslate();
+
 InterCodes JointCodes(InterCodes code1, InterCodes code2);
 
 InterCodes MakeInterCodesNode();
@@ -348,5 +355,13 @@ Operand NewLabel();
 Operand NewConstInt(int ival);
 
 Operand NewConstFloat(float fval);
+
+/*============= ir_gen =============*/
+
+char* OpeName(Operand ope);
+
+char* RelopName(RELOP_TYPE relop);
+
+void IRGen(InterCodes root);
 
 #endif
