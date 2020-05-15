@@ -342,7 +342,7 @@ InterCodes GetAddr(Node *exp, Operand addr);
 
 InterCodes JointCodes(InterCodes code1, InterCodes code2);
 
-InterCodes MakeInterCodesNode(IC_TYPE kind, ...);
+InterCodes MakeICNode(IC_TYPE kind, ...);
 
 RELOP_TYPE GetRelop(Node *relop);
 

@@ -460,7 +460,7 @@ InterCodes GetAddr(Node* exp, Operand addr) {
       /* ID */
       Operand ope = LookupOpe(exp->child[0]->ident);
       Type type = LookupTab(exp->child[0]->ident);
-      InterCodes code1 = MakeInterCodesNode(I_ASSIGN, addr, ope);
+      InterCodes code1 = MakeICNode(I_ASSIGN, addr, ope);
       if (type->kind == BASIC) {
         code1->data->kind = I_ADDR;
       }
@@ -471,9 +471,8 @@ InterCodes GetAddr(Node* exp, Operand addr) {
       Operand addr1 = NewTemp();
       InterCodes code1 = GetAddr(exp->child[0], addr1);
       Type type = GetNearestType(exp->child[0]);
-      assert(type->kind == STRUCTURE);
       Operand off = NewConstInt(GetStructMemOff(type, exp->child[2]->ident));
-      InterCodes code2 = MakeInterCodesNode(I_ADD, addr, addr1, off);
+      InterCodes code2 = MakeICNode(I_ADD, addr, addr1, off);
       return JointCodes(code1, code2);
     } break;
     case 4: {
@@ -484,8 +483,8 @@ InterCodes GetAddr(Node* exp, Operand addr) {
       Operand size = NewConstInt(GetSize(type));
       Operand len = NewTemp();
       InterCodes code2 = TranslateExp(exp->child[2], len);
-      InterCodes code3 = MakeInterCodesNode(I_MUL, len, len, size);
-      InterCodes code4 = MakeInterCodesNode(I_ADD, addr, addr1, len);
+      InterCodes code3 = MakeICNode(I_MUL, len, len, size);
+      InterCodes code4 = MakeICNode(I_ADD, addr, addr1, len);
       JointCodes(code3, code4);
       JointCodes(code2, code3);
       return JointCodes(code1, code2);
@@ -494,15 +493,8 @@ InterCodes GetAddr(Node* exp, Operand addr) {
 }
 
 InterCodes JointCodes(InterCodes code1, InterCodes code2) {
-  if (code1 == NULL) {
-    if (code2 == NULL) {
-      assert(0);
-    }
-    return code2;
-  }
-  if (code2 == NULL) {
-    return code1;
-  }
+  if (code1 == NULL) return code2;
+  if (code2 == NULL) return code1;
   InterCodes temp = code1;
   while (temp->next) {
     temp = temp->next;
@@ -512,12 +504,13 @@ InterCodes JointCodes(InterCodes code1, InterCodes code2) {
   return code1;
 }
 
-InterCodes MakeInterCodesNode(IC_TYPE kind, ...) {
+InterCodes MakeICNode(IC_TYPE kind, ...) {
   InterCodes ret = (InterCodes)malloc(sizeof(struct InterCodes_));
   ret->prev = NULL, ret->next = NULL;
   ret->data = (InterCode)malloc(sizeof(struct InterCode_));
   ret->data->kind = kind;
   va_list ap;
+  va_start(ap, kind);
   switch (kind) {
     case I_LABEL:
     case I_JMP:
@@ -527,33 +520,28 @@ InterCodes MakeInterCodesNode(IC_TYPE kind, ...) {
     case I_READ:
     case I_WRITE:
     case I_FUNC: {
-      va_start(ap, 1);
       ret->data->u.single.x = va_arg(ap, Operand);
-      va_end(ap);
     } break;
     case I_ASSIGN:
     case I_ADDR:
     case I_DEREF_L:
     case I_DEREF_R:
     case I_CALL: {
-      va_start(ap, 2);
       ret->data->u.unary.x = va_arg(ap, Operand);
       ret->data->u.unary.y = va_arg(ap, Operand);
-      va_end(ap);
     } break;
     case I_ADD:
     case I_SUB:
     case I_MUL:
     case I_DIV: {
-      va_start(ap, 3);
       ret->data->u.binop.x = va_arg(ap, Operand);
       ret->data->u.binop.y = va_arg(ap, Operand);
       ret->data->u.binop.z = va_arg(ap, Operand);
-      va_end(ap);
     } break;
     default:
       break;
   }
+  va_end(ap);
   return ret;
 }
 
@@ -591,15 +579,9 @@ Operand NewConstFloat(float fval) {
   return temp_float;
 }
 
-InterCodes GotoCode(Operand label) {
-  InterCodes goto_code = MakeInterCodesNode(I_JMP, label);
-  return goto_code;
-}
+InterCodes GotoCode(Operand label) { return MakeICNode(I_JMP, label); }
 
-InterCodes LabelCode(Operand label) {
-  InterCodes label_code = MakeInterCodesNode(I_LABEL, label);
-  return label_code;
-}
+InterCodes LabelCode(Operand label) { return MakeICNode(I_LABEL, label); }
 
 RELOP_TYPE GetRelop(Node* relop) {
   assert(strcmp(relop->symbol, "RELOP") == 0);
@@ -804,7 +786,7 @@ void DeleteIRNode(InterCodes to_del) {
 InterCodes SimplifyAssign(InterCodes to_simp) {
   IC_TYPE kind = to_simp->data->kind;
   Operand x = to_simp->next->data->u.unary.x, y = to_simp->data->u.unary.y;
-  InterCodes new_code = MakeInterCodesNode(kind, x, y);
+  InterCodes new_code = MakeICNode(kind, x, y);
   to_simp->data->u.unary.x->ref_cnt -= 2;
 
   new_code->prev = to_simp->prev;
