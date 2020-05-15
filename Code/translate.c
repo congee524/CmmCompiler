@@ -27,9 +27,8 @@ InterCodes TranslateExtDef(Node *ext_def) {
 }
 
 InterCodes TranslateFunDec(Node *fun_dec) {
-  InterCodes func_node = MakeInterCodesNode();
-  func_node->data->kind = I_FUNC;
-  func_node->data->u.func.f = LookupOpe(fun_dec->child[0]->ident);
+  InterCodes func_node =
+      MakeInterCodesNode(I_FUNC, LookupOpe(fun_dec->child[0]->ident));
 
   InterCodes param_list = NULL;
   if (fun_dec->n_child == 4) {
@@ -54,9 +53,7 @@ InterCodes TranslateParamDec(Node *param_dec) {
     var_dec = var_dec->child[0];
   }
   Node *id = var_dec->child[0];
-  InterCodes param = MakeInterCodesNode();
-  param->data->kind = I_PARAM;
-  param->data->u.param.x = LookupOpe(id->ident);
+  InterCodes param = MakeInterCodesNode(I_PARAM, LookupOpe(id->ident));
   return param;
 }
 
@@ -103,15 +100,11 @@ InterCodes TranslateDec(Node *dec) {
   Operand ope = LookupOpe(id->ident);
   Type ope_type = LookupTab(id->ident);
   if (ope_type->kind != BASIC) {
-    InterCodes dec_code = MakeInterCodesNode();
     Operand raw_ope = NewTemp();
-    dec_code->data->kind = I_DEC;
+    InterCodes dec_code = MakeInterCodesNode(I_DEC);
     dec_code->data->u.dec.size = GetSize(ope_type);
     dec_code->data->u.dec.x = raw_ope;
-    InterCodes addr_code = MakeInterCodesNode();
-    addr_code->data->kind = I_ADDR;
-    addr_code->data->u.addr.x = ope;
-    addr_code->data->u.addr.y = raw_ope;
+    InterCodes addr_code = MakeInterCodesNode(I_ADDR, ope, raw_ope);
     JointCodes(dec_code, addr_code);
     ret = JointCodes(ret, dec_code);
   }
@@ -146,9 +139,7 @@ InterCodes TranslateStmt(Node *stmt) {
       /* RETURN Exp SEMI */
       Operand temp = NewTemp();
       InterCodes code1 = TranslateExp(stmt->child[1], temp);
-      InterCodes code2 = MakeInterCodesNode();
-      code2->data->kind = I_RETURN;
-      code2->data->u.ret.x = temp;
+      InterCodes code2 = MakeInterCodesNode(I_RETURN, temp);
       return JointCodes(code1, code2);
     }
     case 5: {
@@ -209,22 +200,15 @@ InterCodes TranslateExp(Node *exp, Operand place) {
       Node *obj = exp->child[0];
       if (!strcmp(obj->symbol, "ID")) {
         Operand variable = LookupOpe(obj->ident);
-        InterCodes code = MakeInterCodesNode();
-        code->data->kind = I_ASSIGN;
-        code->data->u.assign.x = place;
-        code->data->u.assign.y = variable;
+        InterCodes code = MakeInterCodesNode(I_ASSIGN, place, variable);
         return code;
       } else if (!strcmp(obj->symbol, "INT")) {
-        InterCodes code = MakeInterCodesNode();
-        code->data->kind = I_ASSIGN;
-        code->data->u.assign.x = place;
-        code->data->u.assign.y = NewConstInt(obj->ival);
+        InterCodes code =
+            MakeInterCodesNode(I_ASSIGN, place, NewConstInt(obj->ival));
         return code;
       } else if (!strcmp(obj->symbol, "FLOAT")) {
-        InterCodes code = MakeInterCodesNode();
-        code->data->kind = I_ASSIGN;
-        code->data->u.assign.x = place;
-        code->data->u.assign.y = NewConstFloat(obj->fval);
+        InterCodes code =
+            MakeInterCodesNode(I_ASSIGN, place, NewConstFloat(obj->fval));
         return code;
       } else {
         assert(0);
@@ -238,25 +222,15 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         /* MINUS Exp */
         Operand t1 = NewTemp();
         InterCodes code1 = TranslateExp(exp->child[1], t1);
-        InterCodes code2 = MakeInterCodesNode();
-        code2->data->kind = I_SUB;
-        code2->data->u.sub.x = place;
-        code2->data->u.sub.y = NewConstInt(0);
-        code2->data->u.sub.z = t1;
+        InterCodes code2 = MakeInterCodesNode(I_SUB, place, NewConstInt(0), t1);
         return JointCodes(code1, code2);
       } else if (!strcmp(ope->symbol, "NOT")) {
         /* NOT Exp */
         Operand label1 = NewLabel(), label2 = NewLabel();
-        InterCodes code0 = MakeInterCodesNode();
-        code0->data->kind = I_ASSIGN;
-        code0->data->u.assign.x = place;
-        code0->data->u.assign.y = NewConstInt(0);
+        InterCodes code0 = MakeInterCodesNode(I_ASSIGN, place, NewConstInt(0));
         InterCodes code1 = TranslateCond(exp, label1, label2);
         InterCodes label1_code = LabelCode(label1);
-        InterCodes code2 = MakeInterCodesNode();
-        code2->data->kind = I_ASSIGN;
-        code2->data->u.assign.x = place;
-        code2->data->u.assign.y = NewConstInt(1);
+        InterCodes code2 = MakeInterCodesNode(I_ASSIGN, place, NewConstInt(1));
         JointCodes(code2, LabelCode(label2));
         JointCodes(label1_code, code2);
         JointCodes(code1, label1_code);
@@ -284,46 +258,23 @@ InterCodes TranslateExp(Node *exp, Operand place) {
             Operand addr1 = NewTemp(), addr2 = NewTemp();
             InterCodes code1 = GetAddr(exp1, addr1);
             InterCodes code2 = GetAddr(exp2, addr2);
-            InterCodes code3 = MakeInterCodesNode();
-            code3->data->kind = I_ASSIGN;
-            code3->data->u.assign.x = place;
-            code3->data->u.assign.y = addr2;
+            InterCodes code3 = MakeInterCodesNode(I_ASSIGN, place, addr2);
             JointCodes(code2, code3);
             InterCodes addr_inc_r, addr_deref_r, addr_inc_l, addr_deref_l;
             Operand step = NewConstInt(4), t1 = NewTemp();
             for (int i = 1; i < size; i++) {
-              addr_deref_r = MakeInterCodesNode();
-              addr_deref_r->data->kind = I_DEREF_R;
-              addr_deref_r->data->u.deref_r.x = t1;
-              addr_deref_r->data->u.deref_r.y = addr2;
-              addr_deref_l = MakeInterCodesNode();
-              addr_deref_l->data->kind = I_DEREF_L;
-              addr_deref_l->data->u.deref_l.x = addr1;
-              addr_deref_l->data->u.deref_l.y = t1;
-              addr_inc_r = MakeInterCodesNode();
-              addr_inc_r->data->kind = I_ADD;
-              addr_inc_r->data->u.add.x = addr2;
-              addr_inc_r->data->u.add.y = addr2;
-              addr_inc_r->data->u.add.z = step;
-              addr_inc_l = MakeInterCodesNode();
-              addr_inc_l->data->kind = I_ADD;
-              addr_inc_l->data->u.add.x = addr1;
-              addr_inc_l->data->u.add.y = addr1;
-              addr_inc_l->data->u.add.z = step;
+              addr_deref_r = MakeInterCodesNode(I_DEREF_R, t1, addr2);
+              addr_deref_l = MakeInterCodesNode(I_DEREF_L, addr1, t1);
+              addr_inc_r = MakeInterCodesNode(I_ADD, addr2, addr2, step);
+              addr_inc_l = MakeInterCodesNode(I_ADD, addr1, addr1, step);
               JointCodes(addr_inc_r, addr_inc_l);
               JointCodes(addr_deref_l, addr_inc_r);
               JointCodes(addr_deref_r, addr_deref_l);
               JointCodes(code3, addr_deref_r);
               code3 = addr_inc_l;
             }
-            addr_deref_r = MakeInterCodesNode();
-            addr_deref_r->data->kind = I_DEREF_R;
-            addr_deref_r->data->u.deref_r.x = t1;
-            addr_deref_r->data->u.deref_r.y = addr2;
-            addr_deref_l = MakeInterCodesNode();
-            addr_deref_l->data->kind = I_DEREF_L;
-            addr_deref_l->data->u.deref_l.x = addr1;
-            addr_deref_l->data->u.deref_l.y = t1;
+            addr_deref_r = MakeInterCodesNode(I_DEREF_R, t1, addr2);
+            addr_deref_l = MakeInterCodesNode(I_DEREF_L, addr1, t1);
             JointCodes(addr_deref_r, addr_deref_l);
             JointCodes(code3, addr_deref_r);
             return JointCodes(code1, code2);
@@ -332,14 +283,8 @@ InterCodes TranslateExp(Node *exp, Operand place) {
             InterCodes code1 = TranslateExp(exp2, t1);
             Operand addr = NewTemp();
             InterCodes code2 = GetAddr(exp1, addr);
-            InterCodes code3 = MakeInterCodesNode();
-            code3->data->kind = I_DEREF_L;
-            code3->data->u.deref_l.x = addr;
-            code3->data->u.deref_l.y = t1;
-            InterCodes code4 = MakeInterCodesNode();
-            code4->data->kind = I_ASSIGN;
-            code4->data->u.assign.x = place;
-            code4->data->u.assign.y = t1;
+            InterCodes code3 = MakeInterCodesNode(I_DEREF_L, addr, t1);
+            InterCodes code4 = MakeInterCodesNode(I_ASSIGN, place, t1);
             JointCodes(code3, code4);
             JointCodes(code2, code3);
             return JointCodes(code1, code2);
@@ -347,16 +292,12 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         } else if (!strcmp(ope->symbol, "AND") || !strcmp(ope->symbol, "OR") ||
                    !strcmp(ope->symbol, "RELOP")) {
           Operand label1 = NewLabel(), label2 = NewLabel();
-          InterCodes code0 = MakeInterCodesNode();
-          code0->data->kind = I_ASSIGN;
-          code0->data->u.assign.x = place;
-          code0->data->u.assign.y = NewConstInt(0);
+          InterCodes code0 =
+              MakeInterCodesNode(I_ASSIGN, place, NewConstInt(0));
           InterCodes code1 = TranslateCond(exp, label1, label2);
           InterCodes label1_code = LabelCode(label1);
-          InterCodes code2 = MakeInterCodesNode();
-          code2->data->kind = I_ASSIGN;
-          code2->data->u.assign.x = place;
-          code2->data->u.assign.y = NewConstInt(1);
+          InterCodes code2 =
+              MakeInterCodesNode(I_ASSIGN, place, NewConstInt(1));
           JointCodes(code2, LabelCode(label2));
           JointCodes(label1_code, code2);
           JointCodes(code1, label1_code);
@@ -365,10 +306,7 @@ InterCodes TranslateExp(Node *exp, Operand place) {
           Operand t1 = NewTemp(), t2 = NewTemp();
           InterCodes code1 = TranslateExp(exp1, t1);
           InterCodes code2 = TranslateExp(exp2, t2);
-          InterCodes code3 = MakeInterCodesNode();
-          code3->data->u.binop.x = place;
-          code3->data->u.binop.y = t1;
-          code3->data->u.binop.z = t2;
+          InterCodes code3 = MakeInterCodesNode(I_ADD, place, t1, t2);
           if (!strcmp(ope->symbol, "PLUS")) {
             code3->data->kind = I_ADD;
           } else if (!strcmp(ope->symbol, "MINUS")) {
@@ -385,16 +323,10 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         /* Exp1 DOT ID */
         Operand addr = NewTemp();
         InterCodes code1 = GetAddr(exp, addr);
-        InterCodes code2 = MakeInterCodesNode();
+        InterCodes code2 = MakeInterCodesNode(I_ASSIGN, place, addr);
         Type type = GetNearestType(exp);
         if (type->kind == BASIC) {
           code2->data->kind = I_DEREF_R;
-          code2->data->u.deref_r.x = place;
-          code2->data->u.deref_r.y = addr;
-        } else {
-          code2->data->kind = I_ASSIGN;
-          code2->data->u.assign.x = place;
-          code2->data->u.assign.y = addr;
         }
         return JointCodes(code1, code2);
       } else {
@@ -405,7 +337,7 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         } else if (!strcmp(exp->child[0]->symbol, "ID")) {
           /* ID LP RP  function */
           char *id = exp->child[0]->ident;
-          InterCodes code = MakeInterCodesNode();
+          InterCodes code = MakeInterCodesNode(I_TEMP);
           if (!strcmp(id, "read")) {
             code->data->kind = I_READ;
             code->data->u.read.x = place;
@@ -430,40 +362,28 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         arg_list->arg = NULL;
         InterCodes code1 = TranslateArgs(exp->child[2], arg_list);
         if (!strcmp(exp->child[0]->ident, "write")) {
-          InterCodes code2 = MakeInterCodesNode();
-          code2->data->kind = I_WRITE;
-          code2->data->u.write.x = arg_list->next->arg;
+          InterCodes code2 = MakeInterCodesNode(I_WRITE, arg_list->next->arg);
           return JointCodes(code1, code2);
         }
         ArgList temp = arg_list;
         InterCodes arg_code = NULL;
         while (temp->next) {
           temp = temp->next;
-          arg_code = MakeInterCodesNode();
-          arg_code->data->kind = I_ARG;
-          arg_code->data->u.arg.x = temp->arg;
+          arg_code = MakeInterCodesNode(I_ARG, temp->arg);
           JointCodes(code1, arg_code);
         }
         Operand func = LookupOpe(exp->child[0]->ident);
-        InterCodes code2 = MakeInterCodesNode();
-        code2->data->kind = I_CALL;
-        code2->data->u.call.f = func;
-        code2->data->u.call.x = place;
+        InterCodes code2 = MakeInterCodesNode(I_CALL, place, func);
         return JointCodes(code1, code2);
       } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
         /* Exp LB Exp RB */
         Operand addr = NewTemp();
         InterCodes code1 = GetAddr(exp, addr);
-        InterCodes code2 = MakeInterCodesNode();
+        InterCodes code2 = MakeInterCodesNode(I_ASSIGN, place, addr);
         Type type = GetNearestType(exp);
         if (type->kind == BASIC) {
           code2->data->kind = I_DEREF_R;
-          code2->data->u.deref_r.x = place;
-          code2->data->u.deref_r.y = addr;
         } else {
-          code2->data->kind = I_ASSIGN;
-          code2->data->u.assign.x = place;
-          code2->data->u.assign.y = addr;
         }
         return JointCodes(code1, code2);
       } else {
@@ -487,8 +407,7 @@ InterCodes TranslateCond(Node *exp, Operand label_true, Operand label_false) {
       Operand t1 = NewTemp(), t2 = NewTemp();
       InterCodes code1 = TranslateExp(exp->child[0], t1);
       InterCodes code2 = TranslateExp(exp->child[2], t2);
-      InterCodes code3 = MakeInterCodesNode();
-      code3->data->kind = I_JMP_IF;
+      InterCodes code3 = MakeInterCodesNode(I_JMP_IF);
       code3->data->u.jmp_if.x = t1;
       code3->data->u.jmp_if.y = t2;
       code3->data->u.jmp_if.z = label_true;
@@ -516,8 +435,7 @@ InterCodes TranslateCond(Node *exp, Operand label_true, Operand label_false) {
   }
   Operand t1 = NewTemp();
   InterCodes code1 = TranslateExp(exp, t1);
-  InterCodes code2 = MakeInterCodesNode();
-  code2->data->kind = I_JMP_IF;
+  InterCodes code2 = MakeInterCodesNode(I_JMP_IF);
   code2->data->u.jmp_if.x = t1;
   code2->data->u.jmp_if.y = NewConstInt(0);
   code2->data->u.jmp_if.z = label_true;
@@ -551,92 +469,73 @@ void IRGen(InterCodes root) {
     data = root->data;
     switch (data->kind) {
       case I_LABEL: {
-        /* LABEL x : */
         fprintf(fout, "LABEL %s :\n", OpeName(data->u.label.x));
-      } break;
+      } break; /* LABEL x : */
       case I_FUNC: {
-        /* FUNCTION f : */
         fprintf(fout, "FUNCTION %s :\n", OpeName(data->u.func.f));
-      } break;
+      } break; /* FUNCTION f : */
       case I_ASSIGN: {
-        /* x := y */
         fprintf(fout, "%s := %s\n", OpeName(data->u.unary.x),
                 OpeName(data->u.unary.y));
-      } break;
+      } break; /* x := y */
       case I_ADD: {
-        /* x := y + z */
         fprintf(fout, "%s := %s + %s\n", OpeName(data->u.binop.x),
                 OpeName(data->u.binop.y), OpeName(data->u.binop.z));
-      } break;
+      } break; /* x := y + z */
       case I_SUB: {
-        /* x := y - z */
         fprintf(fout, "%s := %s - %s\n", OpeName(data->u.binop.x),
                 OpeName(data->u.binop.y), OpeName(data->u.binop.z));
-      } break;
+      } break; /* x := y - z */
       case I_MUL: {
-        /* x := y * z */
         fprintf(fout, "%s := %s * %s\n", OpeName(data->u.binop.x),
                 OpeName(data->u.binop.y), OpeName(data->u.binop.z));
-      } break;
+      } break; /* x := y * z */
       case I_DIV: {
-        /* x := y / z */
         fprintf(fout, "%s := %s / %s\n", OpeName(data->u.binop.x),
                 OpeName(data->u.binop.y), OpeName(data->u.binop.z));
-      } break;
+      } break; /* x := y / z */
       case I_ADDR: {
-        /* x := &y */
         fprintf(fout, "%s := &%s\n", OpeName(data->u.unary.x),
                 OpeName(data->u.unary.y));
-      } break;
+      } break; /* x := &y */
       case I_DEREF_R: {
-        /* x := *y */
         fprintf(fout, "%s := *%s\n", OpeName(data->u.unary.x),
                 OpeName(data->u.unary.y));
-      } break;
+      } break; /* x := *y */
       case I_DEREF_L: {
-        /* *x := y */
         fprintf(fout, "*%s := %s\n", OpeName(data->u.unary.x),
                 OpeName(data->u.unary.y));
-      } break;
+      } break; /* *x := y */
       case I_JMP: {
-        /* GOTO x */
         fprintf(fout, "GOTO %s\n", OpeName(data->u.jmp.x));
-      } break;
+      } break; /* GOTO x */
       case I_JMP_IF: {
-        /* IF x [relop] y GOTO z */
         fprintf(fout, "IF %s %s %s GOTO %s\n", OpeName(data->u.jmp_if.x),
                 RelopName(data->u.jmp_if.relop), OpeName(data->u.jmp_if.y),
                 OpeName(data->u.jmp_if.z));
-      } break;
+      } break; /* IF x [relop] y GOTO z */
       case I_RETURN: {
-        /* RETURN x */
         fprintf(fout, "RETURN %s\n", OpeName(data->u.ret.x));
-      } break;
+      } break; /* RETURN x */
       case I_DEC: {
-        /* DEC x [size] */
         fprintf(fout, "DEC %s %d\n", OpeName(data->u.dec.x), data->u.dec.size);
-      } break;
+      } break; /* DEC x [size] */
       case I_ARG: {
-        /* ARG x */
         fprintf(fout, "ARG %s\n", OpeName(data->u.arg.x));
-      } break;
+      } break; /* ARG x */
       case I_CALL: {
-        /* x := CALL f */
         fprintf(fout, "%s := CALL %s\n", OpeName(data->u.call.x),
                 OpeName(data->u.call.f));
-      } break;
+      } break; /* x := CALL f */
       case I_PARAM: {
-        /* PARAM x */
         fprintf(fout, "PARAM %s\n", OpeName(data->u.param.x));
-      } break;
+      } break; /* PARAM x */
       case I_READ: {
-        /* READ x */
         fprintf(fout, "READ %s\n", OpeName(data->u.read.x));
-      } break;
+      } break; /* READ x */
       case I_WRITE: {
-        /* WRITE x */
         fprintf(fout, "WRITE %s\n", OpeName(data->u.write.x));
-      } break;
+      } break; /* WRITE x */
       default:
         assert(0);
     }

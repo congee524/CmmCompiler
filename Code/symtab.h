@@ -153,32 +153,35 @@ typedef enum RELOP_TYPE {
   NEQ      /* != */
 } RELOP_TYPE;
 
+typedef enum IC_TYPE {
+  I_LABEL = 0, /* LABEL x: */
+  I_FUNC,      /* FUNCTION f: */
+  I_ASSIGN,    /* x := y */
+  I_ADD,       /* x := y + z */
+  I_SUB,       /* x := y - z */
+  I_MUL,       /* x := y * z */
+  I_DIV,       /* x := y / z */
+  I_ADDR,      /* x := &y */
+  I_DEREF_R,   /* x := *y */
+  I_DEREF_L,   /* *x := y */
+  I_JMP,       /* GOTO x */
+  I_JMP_IF,    /* IF x [relop] y GOTO z */
+  I_RETURN,    /* RETURN x */
+  I_DEC,       /* DEC x [size] */
+  I_ARG,       /* ARG x */
+  I_CALL,      /* x := CALL f */
+  I_PARAM,     /* PARAM x */
+  I_READ,      /* READ x */
+  I_WRITE,     /* WRITE x */
+  I_TEMP
+} IC_TYPE;
+
 struct InterCode_ {
-  enum {
-    I_LABEL = 0, /* LABEL x: */
-    I_FUNC,      /* FUNCTION f: */
-    I_ASSIGN,    /* x := y */
-    I_ADD,       /* x := y + z */
-    I_SUB,       /* x := y - z */
-    I_MUL,       /* x := y * z */
-    I_DIV,       /* x := y / z */
-    I_ADDR,      /* x := &y */
-    I_DEREF_R,   /* x := *y */
-    I_DEREF_L,   /* *x := y */
-    I_JMP,       /* GOTO x */
-    I_JMP_IF,    /* IF x [relop] y GOTO z */
-    I_RETURN,    /* RETURN x */
-    I_DEC,       /* DEC x [size] */
-    I_ARG,       /* ARG x */
-    I_CALL,      /* x := CALL f */
-    I_PARAM,     /* PARAM x */
-    I_READ,      /* READ x */
-    I_WRITE      /* WRITE x */
-  } kind;
+  IC_TYPE kind;
   union {
     struct {
       Operand x;
-    } label, jmp, ret, arg, param, read, write;
+    } label, jmp, ret, arg, param, read, write, single;
     struct {
       Operand f;
     } func;
@@ -339,7 +342,7 @@ InterCodes GetAddr(Node *exp, Operand addr);
 
 InterCodes JointCodes(InterCodes code1, InterCodes code2);
 
-InterCodes MakeInterCodesNode();
+InterCodes MakeInterCodesNode(IC_TYPE kind, ...);
 
 RELOP_TYPE GetRelop(Node *relop);
 

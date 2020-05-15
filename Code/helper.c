@@ -460,15 +460,9 @@ InterCodes GetAddr(Node* exp, Operand addr) {
       /* ID */
       Operand ope = LookupOpe(exp->child[0]->ident);
       Type type = LookupTab(exp->child[0]->ident);
-      InterCodes code1 = MakeInterCodesNode();
+      InterCodes code1 = MakeInterCodesNode(I_ASSIGN, addr, ope);
       if (type->kind == BASIC) {
         code1->data->kind = I_ADDR;
-        code1->data->u.addr.x = addr;
-        code1->data->u.addr.y = ope;
-      } else {
-        code1->data->kind = I_ASSIGN;
-        code1->data->u.addr.x = addr;
-        code1->data->u.addr.y = ope;
       }
       return code1;
     } break;
@@ -479,11 +473,7 @@ InterCodes GetAddr(Node* exp, Operand addr) {
       Type type = GetNearestType(exp->child[0]);
       assert(type->kind == STRUCTURE);
       Operand off = NewConstInt(GetStructMemOff(type, exp->child[2]->ident));
-      InterCodes code2 = MakeInterCodesNode();
-      code2->data->kind = I_ADD;
-      code2->data->u.add.x = addr;
-      code2->data->u.add.y = addr1;
-      code2->data->u.add.z = off;
+      InterCodes code2 = MakeInterCodesNode(I_ADD, addr, addr1, off);
       return JointCodes(code1, code2);
     } break;
     case 4: {
@@ -494,16 +484,8 @@ InterCodes GetAddr(Node* exp, Operand addr) {
       Operand size = NewConstInt(GetSize(type));
       Operand len = NewTemp();
       InterCodes code2 = TranslateExp(exp->child[2], len);
-      InterCodes code3 = MakeInterCodesNode();
-      code3->data->kind = I_MUL;
-      code3->data->u.mul.x = len;
-      code3->data->u.mul.y = len;
-      code3->data->u.mul.z = size;
-      InterCodes code4 = MakeInterCodesNode();
-      code4->data->kind = I_ADD;
-      code4->data->u.add.x = addr;
-      code4->data->u.add.y = addr1;
-      code4->data->u.add.z = len;
+      InterCodes code3 = MakeInterCodesNode(I_MUL, len, len, size);
+      InterCodes code4 = MakeInterCodesNode(I_ADD, addr, addr1, len);
       JointCodes(code3, code4);
       JointCodes(code2, code3);
       return JointCodes(code1, code2);
@@ -530,10 +512,48 @@ InterCodes JointCodes(InterCodes code1, InterCodes code2) {
   return code1;
 }
 
-InterCodes MakeInterCodesNode() {
+InterCodes MakeInterCodesNode(IC_TYPE kind, ...) {
   InterCodes ret = (InterCodes)malloc(sizeof(struct InterCodes_));
   ret->prev = NULL, ret->next = NULL;
   ret->data = (InterCode)malloc(sizeof(struct InterCode_));
+  ret->data->kind = kind;
+  va_list ap;
+  switch (kind) {
+    case I_LABEL:
+    case I_JMP:
+    case I_RETURN:
+    case I_ARG:
+    case I_PARAM:
+    case I_READ:
+    case I_WRITE:
+    case I_FUNC: {
+      va_start(ap, 1);
+      ret->data->u.single.x = va_arg(ap, Operand);
+      va_end(ap);
+    } break;
+    case I_ASSIGN:
+    case I_ADDR:
+    case I_DEREF_L:
+    case I_DEREF_R:
+    case I_CALL: {
+      va_start(ap, 2);
+      ret->data->u.unary.x = va_arg(ap, Operand);
+      ret->data->u.unary.y = va_arg(ap, Operand);
+      va_end(ap);
+    } break;
+    case I_ADD:
+    case I_SUB:
+    case I_MUL:
+    case I_DIV: {
+      va_start(ap, 3);
+      ret->data->u.binop.x = va_arg(ap, Operand);
+      ret->data->u.binop.y = va_arg(ap, Operand);
+      ret->data->u.binop.z = va_arg(ap, Operand);
+      va_end(ap);
+    } break;
+    default:
+      break;
+  }
   return ret;
 }
 
@@ -572,17 +592,12 @@ Operand NewConstFloat(float fval) {
 }
 
 InterCodes GotoCode(Operand label) {
-  InterCodes goto_code = MakeInterCodesNode();
-  goto_code->data->kind = I_JMP;
-  goto_code->data->u.jmp.x = label;
+  InterCodes goto_code = MakeInterCodesNode(I_JMP, label);
   return goto_code;
 }
 
 InterCodes LabelCode(Operand label) {
-  assert(label != NULL);
-  InterCodes label_code = MakeInterCodesNode();
-  label_code->data->kind = I_LABEL;
-  label_code->data->u.label.x = label;
+  InterCodes label_code = MakeInterCodesNode(I_LABEL, label);
   return label_code;
 }
 
@@ -787,10 +802,9 @@ void DeleteIRNode(InterCodes to_del) {
 }
 
 InterCodes SimplifyAssign(InterCodes to_simp) {
-  InterCodes new_code = MakeInterCodesNode();
-  new_code->data->kind = to_simp->data->kind;
-  new_code->data->u.unary.x = to_simp->next->data->u.unary.x;
-  new_code->data->u.unary.y = to_simp->data->u.unary.y;
+  IC_TYPE kind = to_simp->data->kind;
+  Operand x = to_simp->next->data->u.unary.x, y = to_simp->data->u.unary.y;
+  InterCodes new_code = MakeInterCodesNode(kind, x, y);
   to_simp->data->u.unary.x->ref_cnt -= 2;
 
   new_code->prev = to_simp->prev;
