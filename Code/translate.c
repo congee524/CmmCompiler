@@ -384,13 +384,19 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         }
       } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
         /* Exp1 DOT ID */
-        // TODO() address assign
         Operand addr = NewTemp();
         InterCodes code1 = GetAddr(exp, addr);
         InterCodes code2 = MakeInterCodesNode();
-        code2->data->kind = I_DEREF_R;
-        code2->data->u.deref_r.x = place;
-        code2->data->u.deref_r.y = addr;
+        Type type = GetNearestType(exp);
+        if (type->kind == BASIC) {
+          code2->data->kind = I_DEREF_R;
+          code2->data->u.deref_r.x = place;
+          code2->data->u.deref_r.y = addr;
+        } else {
+          code2->data->kind = I_ASSIGN;
+          code2->data->u.assign.x = place;
+          code2->data->u.assign.y = addr;
+        }
         return JointCodes(code1, code2);
       } else {
         /* ID LP RP | LP EXP RP */
@@ -447,13 +453,19 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         return JointCodes(code1, code2);
       } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
         /* Exp LB Exp RB */
-        // TODO() address assign
         Operand addr = NewTemp();
         InterCodes code1 = GetAddr(exp, addr);
         InterCodes code2 = MakeInterCodesNode();
-        code2->data->kind = I_DEREF_R;
-        code2->data->u.deref_r.x = place;
-        code2->data->u.deref_r.y = addr;
+        Type type = GetNearestType(exp);
+        if (type->kind == BASIC) {
+          code2->data->kind = I_DEREF_R;
+          code2->data->u.deref_r.x = place;
+          code2->data->u.deref_r.y = addr;
+        } else {
+          code2->data->kind = I_ASSIGN;
+          code2->data->u.assign.x = place;
+          code2->data->u.assign.y = addr;
+        }
         return JointCodes(code1, code2);
       } else {
         assert(0);
