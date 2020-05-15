@@ -361,6 +361,8 @@ char *RelopName(RELOP_TYPE relop);
 
 void DeleteIRNode(InterCodes to_del);
 
+void CalRefCnt(InterCodes root);
+
 InterCodes SimplifyAssign(InterCodes to_simp);
 
 InterCodes RemoveTempVar(InterCodes root);

@@ -538,3 +538,108 @@ InterCodes TranslateArgs(Node *args, ArgList arg_list) {
   }
   return code1;
 }
+
+InterCodes OptimIRCode(InterCodes root) {
+  CalRefCnt(root);
+  root = RemoveTempVar(root);
+  return root;
+}
+
+void IRGen(InterCodes root) {
+  InterCode data = NULL;
+  while (root) {
+    data = root->data;
+    switch (data->kind) {
+      case I_LABEL: {
+        /* LABEL x : */
+        fprintf(fout, "LABEL %s :\n", OpeName(data->u.label.x));
+      } break;
+      case I_FUNC: {
+        /* FUNCTION f : */
+        fprintf(fout, "FUNCTION %s :\n", OpeName(data->u.func.f));
+      } break;
+      case I_ASSIGN: {
+        /* x := y */
+        fprintf(fout, "%s := %s\n", OpeName(data->u.unary.x),
+                OpeName(data->u.unary.y));
+      } break;
+      case I_ADD: {
+        /* x := y + z */
+        fprintf(fout, "%s := %s + %s\n", OpeName(data->u.binop.x),
+                OpeName(data->u.binop.y), OpeName(data->u.binop.z));
+      } break;
+      case I_SUB: {
+        /* x := y - z */
+        fprintf(fout, "%s := %s - %s\n", OpeName(data->u.binop.x),
+                OpeName(data->u.binop.y), OpeName(data->u.binop.z));
+      } break;
+      case I_MUL: {
+        /* x := y * z */
+        fprintf(fout, "%s := %s * %s\n", OpeName(data->u.binop.x),
+                OpeName(data->u.binop.y), OpeName(data->u.binop.z));
+      } break;
+      case I_DIV: {
+        /* x := y / z */
+        fprintf(fout, "%s := %s / %s\n", OpeName(data->u.binop.x),
+                OpeName(data->u.binop.y), OpeName(data->u.binop.z));
+      } break;
+      case I_ADDR: {
+        /* x := &y */
+        fprintf(fout, "%s := &%s\n", OpeName(data->u.unary.x),
+                OpeName(data->u.unary.y));
+      } break;
+      case I_DEREF_R: {
+        /* x := *y */
+        fprintf(fout, "%s := *%s\n", OpeName(data->u.unary.x),
+                OpeName(data->u.unary.y));
+      } break;
+      case I_DEREF_L: {
+        /* *x := y */
+        fprintf(fout, "*%s := %s\n", OpeName(data->u.unary.x),
+                OpeName(data->u.unary.y));
+      } break;
+      case I_JMP: {
+        /* GOTO x */
+        fprintf(fout, "GOTO %s\n", OpeName(data->u.jmp.x));
+      } break;
+      case I_JMP_IF: {
+        /* IF x [relop] y GOTO z */
+        fprintf(fout, "IF %s %s %s GOTO %s\n", OpeName(data->u.jmp_if.x),
+                RelopName(data->u.jmp_if.relop), OpeName(data->u.jmp_if.y),
+                OpeName(data->u.jmp_if.z));
+      } break;
+      case I_RETURN: {
+        /* RETURN x */
+        fprintf(fout, "RETURN %s\n", OpeName(data->u.ret.x));
+      } break;
+      case I_DEC: {
+        /* DEC x [size] */
+        fprintf(fout, "DEC %s %d\n", OpeName(data->u.dec.x), data->u.dec.size);
+      } break;
+      case I_ARG: {
+        /* ARG x */
+        fprintf(fout, "ARG %s\n", OpeName(data->u.arg.x));
+      } break;
+      case I_CALL: {
+        /* x := CALL f */
+        fprintf(fout, "%s := CALL %s\n", OpeName(data->u.call.x),
+                OpeName(data->u.call.f));
+      } break;
+      case I_PARAM: {
+        /* PARAM x */
+        fprintf(fout, "PARAM %s\n", OpeName(data->u.param.x));
+      } break;
+      case I_READ: {
+        /* READ x */
+        fprintf(fout, "READ %s\n", OpeName(data->u.read.x));
+      } break;
+      case I_WRITE: {
+        /* WRITE x */
+        fprintf(fout, "WRITE %s\n", OpeName(data->u.write.x));
+      } break;
+      default:
+        assert(0);
+    }
+    root = root->next;
+  }
+}
