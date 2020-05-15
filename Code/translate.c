@@ -595,7 +595,7 @@ InterCodes GetAddr(Node *exp, Operand addr) {
       /* Exp LB Exp RB */
       Operand addr1 = NewTemp();
       InterCodes code1 = GetAddr(exp->child[0], addr1);
-      Type type = GetNearestType(exp->child[0]);
+      Type type = GetNearestType(exp);
       Operand size = NewConstInt(GetSize(type));
       Operand len = NewTemp();
       InterCodes code2 = TranslateExp(exp->child[2], len);
