@@ -812,8 +812,7 @@ InterCodes RemoveTempVar(InterCodes root) {
     switch (data->kind) {
       case I_ASSIGN:
       case I_ADDR:
-      case I_DEREF_R:
-      case I_DEREF_L: {
+      case I_DEREF_R: {
         /* x y */
         if (temp->next && temp->next->data->kind == I_ASSIGN &&
             data->u.unary.x->ref_cnt == 2 &&
@@ -824,6 +823,7 @@ InterCodes RemoveTempVar(InterCodes root) {
         }
         if (data->u.unary.x->ref_cnt == 1) DeleteIRNode(temp);
       } break;
+      case I_DEREF_L:
       case I_ADD:
       case I_SUB:
       case I_MUL:
