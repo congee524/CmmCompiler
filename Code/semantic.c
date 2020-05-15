@@ -338,7 +338,7 @@ void ExpAnalysis(Node* exp) {
         /* variable */
         ExpNode eval = exp->eval;
         eval->isRight = 0;
-        eval->type = LookupTab(obj->ident)->type;
+        eval->type = LookupTab(obj->ident);
         if (eval->type == NULL ||
             (eval->type->kind == STRUCTURE &&
              !strcmp(obj->ident, eval->type->u.struct_name))) {
@@ -871,20 +871,20 @@ Type GetStruct(char* name) {
   return NULL;
 }
 
-SymTable LookupTab(char* name) {
+Type LookupTab(char* name) {
   /* if find symbol failed, return NULL */
   unsigned int idx = hash(name);
   SymTable temp = symtable[idx];
   while (temp) {
     if (!strcmp(temp->name, name)) {
-      return temp;
+      return temp->type;
     }
     temp = temp->next;
   }
   FieldList struct_temp = symtabstack.StructHead, member = NULL;
   while (struct_temp->next) {
     struct_temp = struct_temp->next;
-    member = temp->type->u.structure;
+    member = struct_temp->type->u.structure;
     while (member) {
       if (!strcmp(member->name, name)) {
         return member->type;

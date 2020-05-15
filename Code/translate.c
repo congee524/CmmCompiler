@@ -102,7 +102,7 @@ InterCodes TranslateDec(Node *dec) {
   }
   Node *id = var_dec->child[0];
   Operand ope = LookupOpe(id->ident);
-  Type ope_type = LookupTab(id->ident)->type;
+  Type ope_type = LookupTab(id->ident);
   if (ope_type->kind != BASIC) {
     InterCodes dec_code = MakeInterCodesNode();
     Operand raw_ope = NewTemp();
@@ -275,29 +275,68 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         Node *exp2 = exp->child[2];
         if (!strcmp(ope->symbol, "ASSIGNOP")) {
           /* Exp1 ASSIGNOP Exp */
-          Operand t1 = NewTemp();
-          InterCodes code1 = TranslateExp(exp2, t1);
-          if (exp1->n_child == 1 && !strcmp(exp1->child[0]->symbol, "ID")) {
-            /* variable */
-            Operand variable = LookupOpe(exp1->child[0]->ident);
-            InterCodes code2 = MakeInterCodesNode();
-            code2->data->kind = I_ASSIGN;
-            code2->data->u.assign.x = variable;
-            code2->data->u.assign.y = t1;
+          Type l_type = GetNearestType(exp1);
+          if (l_type->kind != BASIC) {
+            /* array assign */
+            Type r_type = GetNearestType(exp2);
+            int l_size = GetSize(l_type), r_size = GetSize(r_type);
+            int size = (l_size <= r_size) ? l_size : r_size;
+            size /= 4; /* assign by 4 byte */
+            Operand addr1 = NewTemp(), addr2 = NewTemp();
+            InterCodes code1 = GetAddr(exp1, addr1);
+            InterCodes code2 = GetAddr(exp2, addr2);
             InterCodes code3 = MakeInterCodesNode();
             code3->data->kind = I_ASSIGN;
             code3->data->u.assign.x = place;
-            code3->data->u.assign.y = variable;
+            code3->data->u.assign.y = addr2;
             JointCodes(code2, code3);
+            InterCodes addr_inc_r, addr_deref_r, addr_inc_l, addr_deref_l;
+            Operand step = NewConstInt(4), t1 = NewTemp();
+            for (int i = 1; i < size; i++) {
+              addr_deref_r = MakeInterCodesNode();
+              addr_deref_r->data->kind = I_DEREF_R;
+              addr_deref_r->data->u.deref_r.x = t1;
+              addr_deref_r->data->u.deref_r.y = addr2;
+              addr_deref_l = MakeInterCodesNode();
+              addr_deref_l->data->kind = I_DEREF_L;
+              addr_deref_l->data->u.deref_l.x = addr1;
+              addr_deref_l->data->u.deref_l.y = t1;
+              addr_inc_r = MakeInterCodesNode();
+              addr_inc_r->data->kind = I_ADD;
+              addr_inc_r->data->u.add.x = addr2;
+              addr_inc_r->data->u.add.y = addr2;
+              addr_inc_r->data->u.add.z = step;
+              addr_inc_l = MakeInterCodesNode();
+              addr_inc_l->data->kind = I_ADD;
+              addr_inc_l->data->u.add.x = addr1;
+              addr_inc_l->data->u.add.y = addr1;
+              addr_inc_l->data->u.add.z = step;
+              JointCodes(addr_inc_r, addr_inc_l);
+              JointCodes(addr_deref_l, addr_inc_r);
+              JointCodes(addr_deref_r, addr_deref_l);
+              JointCodes(code3, addr_deref_r);
+              code3 = addr_inc_l;
+            }
+            addr_deref_r = MakeInterCodesNode();
+            addr_deref_r->data->kind = I_DEREF_R;
+            addr_deref_r->data->u.deref_r.x = t1;
+            addr_deref_r->data->u.deref_r.y = addr2;
+            addr_deref_l = MakeInterCodesNode();
+            addr_deref_l->data->kind = I_DEREF_L;
+            addr_deref_l->data->u.deref_l.x = addr1;
+            addr_deref_l->data->u.deref_l.y = t1;
+            JointCodes(addr_deref_r, addr_deref_l);
+            JointCodes(code3, addr_deref_r);
             return JointCodes(code1, code2);
-          } else if (exp1->n_child == 4) {
-            /* (Exp LB Exp RB)1: array */
+          } else {
+            Operand t1 = NewTemp();
+            InterCodes code1 = TranslateExp(exp2, t1);
             Operand addr = NewTemp();
-            InterCodes code2 = GetHeadAddr(exp1, addr);
+            InterCodes code2 = GetAddr(exp1, addr);
             InterCodes code3 = MakeInterCodesNode();
             code3->data->kind = I_DEREF_L;
             code3->data->u.deref_l.x = addr;
-            code3->data->u.deref_r.y = t1;
+            code3->data->u.deref_l.y = t1;
             InterCodes code4 = MakeInterCodesNode();
             code4->data->kind = I_ASSIGN;
             code4->data->u.assign.x = place;
@@ -305,64 +344,6 @@ InterCodes TranslateExp(Node *exp, Operand place) {
             JointCodes(code3, code4);
             JointCodes(code2, code3);
             return JointCodes(code1, code2);
-          } else {
-            /* (Exp DOT ID)1: structure */
-            if (exp1->child[0]->n_child == 4) {
-              /* (Exp LB Exp RB) DOT ID: structure array */
-              Operand addr = NewTemp();
-              InterCodes code2 = GetHeadAddr(exp1->child[0], addr);
-              Node *id = exp1->child[0];
-              while (id->n_child != 1) {
-                id = id->child[0];
-              }
-              Type type = LookupTab(id->child[0]->ident)->type;
-              while (type->kind == ARRAY) {
-                type = type->u.array.elem;
-              }
-              Operand off =
-                  NewConstInt(GetStructMemOff(type, exp1->child[2]->ident));
-              InterCodes code3 = MakeInterCodesNode();
-              code3->data->kind = I_ADD;
-              code3->data->u.add.x = addr;
-              code3->data->u.add.y = addr;
-              code3->data->u.add.z = off;
-              InterCodes code4 = MakeInterCodesNode();
-              code4->data->kind = I_DEREF_L;
-              code4->data->u.deref_l.x = addr;
-              code4->data->u.deref_l.y = t1;
-              InterCodes code5 = MakeInterCodesNode();
-              code5->data->kind = I_ASSIGN;
-              code5->data->u.assign.x = place;
-              code5->data->u.assign.y = t1;
-              JointCodes(code5, code4);
-              JointCodes(code3, code4);
-              JointCodes(code2, code3);
-              return JointCodes(code1, code2);
-            } else {
-              /* (ID) DOT ID: structure variable */
-              Operand addr = NewTemp();
-              InterCodes addr_code = GetHeadAddr(exp1->child[0], addr);
-              Type type = LookupTab(exp1->child[0]->child[0]->ident)->type;
-              Operand off =
-                  NewConstInt(GetStructMemOff(type, exp1->child[2]->ident));
-              InterCodes code2 = MakeInterCodesNode();
-              code2->data->kind = I_ADD;
-              code2->data->u.add.x = addr;
-              code2->data->u.add.y = addr;
-              code2->data->u.add.z = off;
-              InterCodes code3 = MakeInterCodesNode();
-              code3->data->kind = I_DEREF_L;
-              code3->data->u.deref_l.x = addr;
-              code3->data->u.deref_l.y = t1;
-              InterCodes code4 = MakeInterCodesNode();
-              code4->data->kind = I_ASSIGN;
-              code4->data->u.assign.x = place;
-              code4->data->u.assign.y = t1;
-              JointCodes(code3, code4);
-              JointCodes(code2, code3);
-              JointCodes(addr_code, code2);
-              return JointCodes(code1, addr_code);
-            }
           }
         } else if (!strcmp(ope->symbol, "AND") || !strcmp(ope->symbol, "OR") ||
                    !strcmp(ope->symbol, "RELOP")) {
@@ -403,51 +384,14 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         }
       } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
         /* Exp1 DOT ID */
-        Node *exp1 = exp->child[0];
-        if (exp1->n_child == 4) {
-          /* (Exp LB Exp RB)1 DOT ID: structure array */
-          Operand addr = NewTemp();
-          InterCodes code1 = GetHeadAddr(exp1, addr);
-          Node *id = exp1;
-          while (id->n_child != 1) {
-            id = id->child[0];
-          }
-          Type type = LookupTab(id->child[0]->ident)->type;
-          while (type->kind == ARRAY) {
-            type = type->u.array.elem;
-          }
-          Operand off =
-              NewConstInt(GetStructMemOff(type, exp->child[2]->ident));
-          InterCodes code2 = MakeInterCodesNode();
-          code2->data->kind = I_ADD;
-          code2->data->u.add.x = addr;
-          code2->data->u.add.y = addr;
-          code2->data->u.add.z = off;
-          InterCodes code3 = MakeInterCodesNode();
-          code3->data->kind = I_DEREF_R;
-          code3->data->u.deref_r.x = place;
-          code3->data->u.deref_r.y = addr;
-          JointCodes(code2, code3);
-          return JointCodes(code1, code2);
-        } else {
-          /* (ID)1 DOT ID: structure variable */
-          Operand addr = NewTemp();
-          InterCodes addr_code = GetHeadAddr(exp1, addr);
-          Type type = LookupTab(exp1->child[0]->ident)->type;
-          Operand off =
-              NewConstInt(GetStructMemOff(type, exp->child[2]->ident));
-          InterCodes code1 = MakeInterCodesNode();
-          code1->data->kind = I_ADD;
-          code1->data->u.add.x = addr;
-          code1->data->u.add.y = addr;
-          code1->data->u.add.z = off;
-          InterCodes code2 = MakeInterCodesNode();
-          code2->data->kind = I_DEREF_R;
-          code2->data->u.deref_r.x = place;
-          code2->data->u.deref_r.y = addr;
-          JointCodes(code1, code2);
-          return JointCodes(addr_code, code1);
-        }
+        // TODO() address assign
+        Operand addr = NewTemp();
+        InterCodes code1 = GetAddr(exp, addr);
+        InterCodes code2 = MakeInterCodesNode();
+        code2->data->kind = I_DEREF_R;
+        code2->data->u.deref_r.x = place;
+        code2->data->u.deref_r.y = addr;
+        return JointCodes(code1, code2);
       } else {
         /* ID LP RP | LP EXP RP */
         if (!strcmp(exp->child[0]->symbol, "LP")) {
@@ -503,18 +447,13 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         return JointCodes(code1, code2);
       } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
         /* Exp LB Exp RB */
+        // TODO() address assign
         Operand addr = NewTemp();
-        InterCodes code1 = GetHeadAddr(exp, addr);
+        InterCodes code1 = GetAddr(exp, addr);
         InterCodes code2 = MakeInterCodesNode();
-        if (addr->kind == OP_TEMP) {
-          code2->data->kind = I_DEREF_R;
-          code2->data->u.deref_r.x = place;
-          code2->data->u.deref_r.y = addr;
-        } else {
-          code2->data->kind = I_ASSIGN;
-          code2->data->u.assign.x = place;
-          code2->data->u.assign.y = addr;
-        }
+        code2->data->kind = I_DEREF_R;
+        code2->data->u.deref_r.x = place;
+        code2->data->u.deref_r.y = addr;
         return JointCodes(code1, code2);
       } else {
         assert(0);
@@ -600,19 +539,19 @@ void AddArgs(ArgList arg_list, Operand t1) {
   }
 }
 
-Type GetStructType(Node *exp) {
+Type GetNearestType(Node *exp) {
   switch (exp->n_child) {
     case 1: {
       /* ID */
-      return LookupTab(exp->child[0])->type;
+      return LookupTab(exp->child[0]->ident);
     } break;
     case 3: {
       /* Exp DOT ID */
-      return LookupTab(exp->child[2])->type;
+      return LookupTab(exp->child[2]->ident);
     } break;
     case 4: {
       /* Exp LB Exp RB */
-      return GetStructType(exp->child[0]);
+      return GetNearestType(exp->child[0])->u.array.elem;
     }
     default:
       assert(0);
@@ -620,32 +559,12 @@ Type GetStructType(Node *exp) {
   return NULL;
 }
 
-Type GetArrayType(Node *exp, int *level) {
-  *level = *level + 1;
-  swtich(exp->n_child) {
-    case 1: {
-      /* ID */
-      return LookupTab(exp->child[0])->type;
-    } break;
-    case 3: {
-      /* Exp DOT ID */
-      return LookupTab(exp->child[2])->type;
-    } break;
-    case 4: {
-      /* Exp LB Exp RB */
-      return GetArrayType(exp->child[0], level);
-    } break;
-    default:
-      assert(0);
-  }
-}
-
 InterCodes GetAddr(Node *exp, Operand addr) {
-  swtich(exp->n_child) {
+  switch (exp->n_child) {
     case 1: {
       /* ID */
-      Operand ope = LookupOpe(exp->child[0]);
-      Type type = LookupTab(exp->child[0])->type;
+      Operand ope = LookupOpe(exp->child[0]->ident);
+      Type type = LookupTab(exp->child[0]->ident);
       InterCodes code1 = MakeInterCodesNode();
       if (type->kind == BASIC) {
         code1->data->kind = I_ADDR;
@@ -658,13 +577,13 @@ InterCodes GetAddr(Node *exp, Operand addr) {
       }
       return code1;
     } break;
-    case 3 {
+    case 3: {
       /* Exp DOT ID */
       Operand addr1 = NewTemp();
       InterCodes code1 = GetAddr(exp->child[0], addr1);
-      Type type = GetStructType(exp->child[0]);
+      Type type = GetNearestType(exp->child[0]);
       assert(type->kind == STRUCTURE);
-      Operand off = NewConstInt(GetStructMemOff(type, exp->child[2]));
+      Operand off = NewConstInt(GetStructMemOff(type, exp->child[2]->ident));
       InterCodes code2 = MakeInterCodesNode();
       code2->data->kind = I_ADD;
       code2->data->u.add.x = addr;
@@ -672,94 +591,29 @@ InterCodes GetAddr(Node *exp, Operand addr) {
       code2->data->u.add.z = off;
       return JointCodes(code1, code2);
     } break;
-        case 4: {
+    case 4: {
       /* Exp LB Exp RB */
       Operand addr1 = NewTemp();
       InterCodes code1 = GetAddr(exp->child[0], addr1);
-      int level = 0;
-      Type type = GetArrayType(exp->child[0], &level);
-      assert(type->kind == ARRAY);
-      while (level--) {
-        type = type->u.array.elem;
-      }
+      Type type = GetNearestType(exp->child[0]);
       Operand size = NewConstInt(GetSize(type));
       Operand len = NewTemp();
       InterCodes code2 = TranslateExp(exp->child[2], len);
       InterCodes code3 = MakeInterCodesNode();
-      code3->kind = I_MUL;
-      code3->u.mul.x = len;
-      code3->u.mul.y = len;
-      code3->u.mul.z = size;
+      code3->data->kind = I_MUL;
+      code3->data->u.mul.x = len;
+      code3->data->u.mul.y = len;
+      code3->data->u.mul.z = size;
       InterCodes code4 = MakeInterCodesNode();
-      code4->kind = I_ADD;
-      code4->u.add.x = addr;
-      code4->u.add.y = addr1;
-      code4->u.add.z = len;
+      code4->data->kind = I_ADD;
+      code4->data->u.add.x = addr;
+      code4->data->u.add.y = addr1;
+      code4->data->u.add.z = len;
       JointCodes(code3, code4);
       JointCodes(code2, code3);
       return JointCodes(code1, code2);
     }
   }
-}
-
-InterCodes GetHeadAddr(Node *exp, Operand addr) {
-  Node *temp = exp;
-  int dim = 0;
-  InterCodes ret = NULL;
-  while (temp->n_child != 1) {
-    temp = temp->child[0];
-    ++dim;
-  }
-  SymTable fund_array = LookupTab(temp->child[0]->ident);
-  if (dim == 0) {
-    InterCodes code1 = MakeInterCodesNode();
-    /* has done ope := &ope after dec ope [size] */
-    code1->data->kind = I_ASSIGN;
-    code1->data->u.assign.x = addr;
-    code1->data->u.assign.y = fund_array->op_var;
-    addr->kind = OP_ADDR;
-    return code1;
-  }
-  int len[dim];
-  Operand off[dim];
-  for (int i = 0; i < dim; i++) {
-    off[i] = NewTemp();
-  }
-  assert(fund_array->op_var != NULL);
-  Type fund_type = fund_array->type;
-  Type temp_type = fund_type;
-  temp = exp;
-  for (int i = 1; i <= dim; i++) {
-    ret = JointCodes(ret, TranslateExp(temp->child[2], off[dim - i]));
-    temp_type = temp_type->u.array.elem;
-    temp = temp->child[0];
-    len[i - 1] = GetSize(temp_type);
-  }
-  /* has done ope := &ope after dec ope [size] */
-  if (temp_type->kind != BASIC) {
-    addr->kind = OP_ADDR;
-  }
-  InterCodes code1 = MakeInterCodesNode();
-  code1->data->kind = I_ASSIGN;
-  code1->data->u.assign.x = addr;
-  code1->data->u.assign.y = fund_array->op_var;
-  ret = JointCodes(ret, code1);
-  InterCodes temp_mul = NULL, temp_add = NULL;
-  for (int i = 0; i < dim; i++) {
-    temp_mul = MakeInterCodesNode();
-    temp_mul->data->kind = I_MUL;
-    temp_mul->data->u.mul.x = off[i];
-    temp_mul->data->u.mul.y = off[i];
-    temp_mul->data->u.mul.z = NewConstInt(len[i]);
-    temp_add = MakeInterCodesNode();
-    temp_add->data->kind = I_ADD;
-    temp_add->data->u.add.x = addr;
-    temp_add->data->u.add.y = addr;
-    temp_add->data->u.add.z = off[i];
-    JointCodes(temp_mul, temp_add);
-    JointCodes(code1, temp_mul);
-  }
-  return ret;
 }
 
 InterCodes JointCodes(InterCodes code1, InterCodes code2) {

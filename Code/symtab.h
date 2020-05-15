@@ -179,7 +179,7 @@ FuncTable AddFuncTab(FuncTable func, int isDefined);
 
 int AddStructList(Type structure, int lineno);
 
-SymTable LookupTab(char *name);
+Type LookupTab(char *name);
 
 Type GetStruct(char *name);
 
@@ -334,13 +334,9 @@ void AddArgs(ArgList arg_list, Operand t1);
 
 Operand LookupOpe(char *name);
 
-Type GetStructType(Node *exp);
-
-Type GetArrayType(Node *exp, int *level);
+Type GetNearestType(Node *exp);
 
 InterCodes GetAddr(Node *exp, Operand addr);
-
-InterCodes GetHeadAddr(Node *exp, Operand addr);
 
 void InitTranslate();
 
