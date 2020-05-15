@@ -44,12 +44,6 @@ typedef struct ArgList_ *ArgList;
 typedef struct InterCode_ *InterCode;
 typedef struct InterCodes_ *InterCodes;
 
-unsigned int hash(char *name);
-
-extern FILE *fin, *fout;
-
-/*============= semantic =============*/
-
 struct ExpNode_ {
   int isRight;
   double val;
@@ -124,92 +118,6 @@ struct SymTabStack_ {
   FieldList StructHead;
   SymTableNode var_stack[256];
 };
-
-extern SymTable symtable[0x3fff + 1];
-extern FuncTable FuncHead;
-extern struct SymTabStack_ symtabstack;
-
-void SemanticAnalysis(Node *root);
-
-void ExtDefAnalysis(Node *root);
-
-void CompSTAnalysis(Node *root, FuncTable func);
-
-void DefListAnalysis(Node *def_list);
-
-void DefAnalysis(Node *def);
-
-void DecListAnalysis(Node *root, Type type);
-
-void StmtListAnalysis(Node *stmt_list, FuncTable func);
-
-void StmtAnalysis(Node *stmt, FuncTable func);
-
-void ExpAnalysis(Node *exp);
-
-void ExtDecListAnalysis(Node *root, Type type);
-
-FuncTable FunDecAnalysis(Node *root, Type type);
-
-FieldList VarListAnalysis(Node *var_list);
-
-FieldList ParamDecAnalysis(Node *param);
-
-FieldList ArgsAnalysis(Node *args);
-
-Type SpecAnalysis(Node *spec);
-
-Type StructSpecAnalysis(Node *struct_spec);
-
-char *TraceVarDec(Node *var_dec, int *dim, int *size, int *m_size);
-
-Type ConstArray(Type fund, int dim, int *size, int level);
-
-FieldList FetchStructField(Node *def_list);
-
-FieldList ConstFieldFromDecList(Node *dec_List, Type type);
-
-void CreateLocalVar();
-
-void DeleteLocalVar();
-
-SymTable AddSymTab(char *type_name, Type type, int lineno);
-
-FuncTable AddFuncTab(FuncTable func, int isDefined);
-
-int AddStructList(Type structure, int lineno);
-
-Type LookupTab(char *name);
-
-Type GetStruct(char *name);
-
-int GetSize(Type type);
-
-int GetStructMemOff(Type type, char *name);
-
-int CheckSymTab(char *sym_name, Type type, int lineno);
-
-int CheckFuncTab(FuncTable func, int isDefined);
-
-int CheckStructName(char *name);
-
-Type CheckStructField(FieldList structure, char *name);
-
-void CheckFuncDefined();
-
-int CheckTypeEql(Type t1, Type t2);
-
-int CheckFieldEql(FieldList f1, FieldList f2);
-
-Type CheckFuncCall(char *func_name, FieldList para, int lineno);
-
-int CheckLogicOPE(Node *exp);
-
-int CheckArithOPE(Node *obj1, Node *obj2);
-
-void InitSA();
-
-/*============= translate =============*/
 
 struct Operand_ {
   enum {
@@ -300,7 +208,49 @@ struct InterCodes_ {
   struct InterCodes_ *next;
 };
 
+extern FILE *fin, *fout;
+extern SymTable symtable[0x3fff + 1];
+extern FuncTable FuncHead;
+extern struct SymTabStack_ symtabstack;
 extern InterCodes CodeHead;
+
+/*============= semantic =============*/
+
+void SemanticAnalysis(Node *root);
+
+void ExtDefAnalysis(Node *root);
+
+void CompSTAnalysis(Node *root, FuncTable func);
+
+void DefListAnalysis(Node *def_list);
+
+void DefAnalysis(Node *def);
+
+void DecListAnalysis(Node *root, Type type);
+
+void StmtListAnalysis(Node *stmt_list, FuncTable func);
+
+void StmtAnalysis(Node *stmt, FuncTable func);
+
+void ExpAnalysis(Node *exp);
+
+void ExtDecListAnalysis(Node *root, Type type);
+
+FuncTable FunDecAnalysis(Node *root, Type type);
+
+FieldList VarListAnalysis(Node *var_list);
+
+FieldList ParamDecAnalysis(Node *param);
+
+FieldList ArgsAnalysis(Node *args);
+
+Type SpecAnalysis(Node *spec);
+
+Type StructSpecAnalysis(Node *struct_spec);
+
+void InitSA();
+
+/*============= translate =============*/
 
 InterCodes Translate(Node *root);
 
@@ -330,6 +280,55 @@ InterCodes TranslateCond(Node *exp, Operand label_true, Operand label_false);
 
 InterCodes TranslateArgs(Node *args, ArgList arg_list);
 
+/*============= helper =============*/
+void SemanticError(int error_num, int lineno, char *errtext);
+
+char *TraceVarDec(Node *var_dec, int *dim, int *size, int *m_size);
+
+Type ConstArray(Type fund, int dim, int *size, int level);
+
+FieldList FetchStructField(Node *def_list);
+
+FieldList ConstFieldFromDecList(Node *dec_List, Type type);
+
+void CreateLocalVar();
+
+void DeleteLocalVar();
+
+SymTable AddSymTab(char *type_name, Type type, int lineno);
+
+FuncTable AddFuncTab(FuncTable func, int isDefined);
+
+int AddStructList(Type structure, int lineno);
+
+Type LookupTab(char *name);
+
+Type GetStruct(char *name);
+
+int GetSize(Type type);
+
+int GetStructMemOff(Type type, char *name);
+
+int CheckSymTab(char *sym_name, Type type, int lineno);
+
+int CheckFuncTab(FuncTable func, int isDefined);
+
+int CheckStructName(char *name);
+
+Type CheckStructField(FieldList structure, char *name);
+
+void CheckFuncDefined();
+
+int CheckTypeEql(Type t1, Type t2);
+
+int CheckFieldEql(FieldList f1, FieldList f2);
+
+Type CheckFuncCall(char *func_name, FieldList para, int lineno);
+
+int CheckLogicOPE(Node *exp);
+
+int CheckArithOPE(Node *obj1, Node *obj2);
+
 void AddArgs(ArgList arg_list, Operand t1);
 
 Operand LookupOpe(char *name);
@@ -337,8 +336,6 @@ Operand LookupOpe(char *name);
 Type GetNearestType(Node *exp);
 
 InterCodes GetAddr(Node *exp, Operand addr);
-
-void InitTranslate();
 
 InterCodes JointCodes(InterCodes code1, InterCodes code2);
 
@@ -357,8 +354,6 @@ Operand NewLabel();
 Operand NewConstInt(int ival);
 
 Operand NewConstFloat(float fval);
-
-/*============= ir_gen =============*/
 
 char *OpeName(Operand ope);
 
