@@ -11,6 +11,7 @@
 
 #define DEBUG
 // #define LOCAL_SYM
+// #define LAB2
 
 #ifdef DEBUG
 #define INFO(msg)                                     \
@@ -216,6 +217,7 @@ extern SymTable symtable[0x3fff + 1];
 extern FuncTable FuncHead;
 extern struct SymTabStack_ symtabstack;
 extern InterCodes CodeHead;
+extern Type TypeInt, TypeFloat;
 
 /*============= semantic =============*/
 
@@ -336,7 +338,9 @@ InterCodes SimplifyPlace(InterCodes code, Operand place, int isVar);
 
 void AddArgs(ArgList arg_list, Operand t1);
 
-Operand LookupOpe(char *name);
+Operand LookupVarOpe(char *name);
+
+Operand LookupFuncOpe(char *name);
 
 Type GetNearestType(Node *exp);
 
@@ -364,15 +368,13 @@ char *OpeName(Operand ope);
 
 char *RelopName(RELOP_TYPE relop);
 
-void DeleteIRNode(InterCodes to_del);
-
 InterCodes RemoveNull(InterCodes root);
 
 void CalRefCnt(InterCodes root);
 
-InterCodes SimplifyAssign(InterCodes to_simp);
+InterCodes SimplifyAssign(InterCodes root);
 
-InterCodes RemoveTempVar(InterCodes root);
+InterCodes SimplifyUselessVar(InterCodes root);
 
 InterCodes OptimIRCode(InterCodes root);
 

@@ -60,7 +60,7 @@ Program:
             SemanticAnalysis($$);
             /* CP3 */
             CodeHead = Translate($$);
-            CodeHead = OptimIRCode(CodeHead);
+            // CodeHead = OptimIRCode(CodeHead);
             IRGen(CodeHead);
         }
     }

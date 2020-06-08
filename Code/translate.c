@@ -28,7 +28,7 @@ InterCodes TranslateExtDef(Node *ext_def) {
 
 InterCodes TranslateFunDec(Node *fun_dec) {
   InterCodes func_node =
-      MakeICNode(I_FUNC, LookupOpe(fun_dec->child[0]->ident));
+      MakeICNode(I_FUNC, LookupFuncOpe(fun_dec->child[0]->ident));
   InterCodes param_list = NULL;
   if (fun_dec->n_child == 4) {
     param_list = TranslateVarList(fun_dec->child[2]);
@@ -52,7 +52,7 @@ InterCodes TranslateParamDec(Node *param_dec) {
     var_dec = var_dec->child[0];
   }
   Node *id = var_dec->child[0];
-  InterCodes param = MakeICNode(I_PARAM, LookupOpe(id->ident));
+  InterCodes param = MakeICNode(I_PARAM, LookupVarOpe(id->ident));
   return param;
 }
 
@@ -88,7 +88,7 @@ InterCodes TranslateDec(Node *dec) {
     var_dec = var_dec->child[0];
   }
   Node *id = var_dec->child[0];
-  Operand ope = LookupOpe(id->ident);
+  Operand ope = LookupVarOpe(id->ident);
   Type ope_type = LookupTab(id->ident);
   if (ope_type->kind != BASIC) {
     Operand raw_ope = NewTemp();
@@ -192,7 +192,7 @@ InterCodes TranslateExp(Node *exp, Operand place) {
       /* 1 nodes */
       Node *obj = exp->child[0];
       if (!strcmp(obj->symbol, "ID")) {
-        return MakeICNode(I_ASSIGN, place, LookupOpe(obj->ident));
+        return MakeICNode(I_ASSIGN, place, LookupVarOpe(obj->ident));
       } else if (!strcmp(obj->symbol, "INT")) {
         return MakeICNode(I_ASSIGN, place, NewConstInt(obj->ival));
       } else if (!strcmp(obj->symbol, "FLOAT")) {
@@ -267,7 +267,7 @@ InterCodes TranslateExp(Node *exp, Operand place) {
             InterCodes code1 = TranslateExp(exp2, t1);
             code1 = SimplifyPlace(code1, t1, 0);
             if (!strcmp(exp1->child[0]->symbol, "ID")) {
-              Operand variable = LookupOpe(exp1->child[0]->ident);
+              Operand variable = LookupVarOpe(exp1->child[0]->ident);
               InterCodes code2 = MakeICNode(I_ASSIGN, variable, t1);
               InterCodes code3 = MakeICNode(I_ASSIGN, place, variable);
               code2 = JointCodes(code2, code3);
@@ -335,7 +335,7 @@ InterCodes TranslateExp(Node *exp, Operand place) {
             code->data->kind = I_READ;
             code->data->u.read.x = place;
           } else {
-            Operand func = LookupOpe(id);
+            Operand func = LookupFuncOpe(id);
             code->data->kind = I_CALL;
             code->data->u.call.f = func;
             code->data->u.call.x = place;
@@ -354,6 +354,8 @@ InterCodes TranslateExp(Node *exp, Operand place) {
         InterCodes code1 = TranslateArgs(exp->child[2], arg_list);
         if (!strcmp(exp->child[0]->ident, "write")) {
           InterCodes code2 = MakeICNode(I_WRITE, arg_list->next->arg);
+          InterCodes code3 = MakeICNode(I_ASSIGN, place, NewConstInt(0));
+          code2 = JointCodes(code2, code3);
           return JointCodes(code1, code2);
         }
         ArgList temp = arg_list;
@@ -363,7 +365,7 @@ InterCodes TranslateExp(Node *exp, Operand place) {
           arg_code = MakeICNode(I_ARG, temp->arg);
           code1 = JointCodes(code1, arg_code);
         }
-        Operand func = LookupOpe(exp->child[0]->ident);
+        Operand func = LookupFuncOpe(exp->child[0]->ident);
         InterCodes code2 = MakeICNode(I_CALL, place, func);
         return JointCodes(code1, code2);
       } else if (!strcmp(exp->child[0]->symbol, "Exp")) {
@@ -453,7 +455,8 @@ InterCodes TranslateArgs(Node *args, ArgList arg_list) {
 InterCodes OptimIRCode(InterCodes root) {
   root = RemoveNull(root);
   CalRefCnt(root);
-  root = RemoveTempVar(root);
+  root = SimplifyAssign(root);
+  root = SimplifyUselessVar(root);
   return root;
 }
 

@@ -476,7 +476,7 @@ InterCodes GetAddr(Node* exp, Operand addr) {
   switch (exp->n_child) {
     case 1: {
       /* ID */
-      Operand ope = LookupOpe(exp->child[0]->ident);
+      Operand ope = LookupVarOpe(exp->child[0]->ident);
       Type type = LookupTab(exp->child[0]->ident);
       InterCodes code1 = MakeICNode(I_ASSIGN, addr, ope);
       if (type->kind == BASIC) {
@@ -626,7 +626,7 @@ RELOP_TYPE GetRelop(Node* relop) {
   }
 }
 
-Operand LookupOpe(char* name) {
+Operand LookupVarOpe(char* name) {
   static int VarNo = 0;
   unsigned int idx = hash(name);
   SymTable temp = symtable[idx];
@@ -642,7 +642,10 @@ Operand LookupOpe(char* name) {
     }
     temp = temp->next;
   }
+  return NULL;
+}
 
+Operand LookupFuncOpe(char* name) {
   /* the symbol is a function */
   FuncTable temp_func = FuncHead;
   while (temp_func->next) {
@@ -657,8 +660,16 @@ Operand LookupOpe(char* name) {
       return temp_func->op_func;
     }
   }
-  assert(0);
   return NULL;
+}
+
+static void DeleteICNode(InterCodes to_del) {
+  if (to_del->prev) {
+    to_del->prev->next = to_del->next;
+  }
+  if (to_del->next) {
+    to_del->next->prev = to_del->prev;
+  }
 }
 
 char* OpeName(Operand ope) {
@@ -683,7 +694,10 @@ char* OpeName(Operand ope) {
       sprintf(s, "label%d", ope->u.var_no);
     } break;
     case OP_FUNC: {
-      sprintf(s, "%s", ope->u.id);
+      if (!strcmp(ope->u.id, "main")) {
+        return "main";
+      }
+      sprintf(s, "func_%s", ope->u.id);
     } break;
     default:
       assert(0);
@@ -717,12 +731,7 @@ InterCodes RemoveNull(InterCodes root) {
   while (temp) {
     data = temp->data;
     if (data == NULL) {
-      if (temp->prev) {
-        temp->prev->next = temp->next;
-      }
-      if (temp->next) {
-        temp->next->prev = temp->prev;
-      }
+      DeleteICNode(temp);
     }
     temp = temp->next;
   }
@@ -820,34 +829,7 @@ void CalRefCnt(InterCodes root) {
   }
 }
 
-void DeleteIRNode(InterCodes to_del) {
-  if (to_del->prev) {
-    to_del->prev->next = to_del->next;
-  }
-  if (to_del->next) {
-    to_del->next->prev = to_del->prev;
-  }
-}
-
-InterCodes SimplifyAssign(InterCodes to_simp) {
-  // TODO()
-  IC_TYPE kind = to_simp->data->kind;
-  Operand x = to_simp->next->data->u.unary.x, y = to_simp->data->u.unary.y;
-  InterCodes new_code = MakeICNode(kind, x, y);
-  to_simp->data->u.unary.x->ref_cnt -= 2;
-
-  new_code->prev = to_simp->prev;
-  new_code->next = to_simp->next->next;
-  if (to_simp->next->next) {
-    to_simp->next->next->prev = new_code;
-  }
-  if (to_simp->prev) {
-    to_simp->prev->next = new_code;
-  }
-  return new_code;
-}
-
-InterCodes RemoveTempVar(InterCodes root) {
+InterCodes SimplifyAssign(InterCodes root) {
   InterCode data = NULL;
   InterCodes temp = root;
   while (temp) {
@@ -855,18 +837,27 @@ InterCodes RemoveTempVar(InterCodes root) {
     switch (data->kind) {
       case I_ASSIGN:
       case I_ADDR:
-      case I_DEREF_R:
+      case I_DEREF_R: {
+        if (temp->next && temp->next->data->kind == I_ASSIGN &&
+            data->u.unary.x->ref_cnt == 2 &&
+            data->u.unary.x == temp->next->data->u.unary.y) {
+          data->u.unary.x->ref_cnt -= 2;
+          data->u.unary.x = temp->next->data->u.unary.x;
+          if (temp->next->next) {
+            temp->next->next->prev = temp;
+          }
+          temp->next = temp->next->next;
+        }
+      } break;
       case I_ADD:
       case I_SUB:
       case I_MUL:
       case I_DIV: {
         if (temp->next && temp->next->data->kind == I_ASSIGN &&
-            data->u.unary.x->ref_cnt == 2 &&
-            data->u.unary.x == temp->next->data->u.unary.y) {
-          /* change t1 = v1, v2 = t1 to v2 = v1*/
-          // temp = SimplifyAssign(temp);
-          // data = temp->data;
-          data->u.unary.x = temp->next->data->u.unary.x;
+            data->u.binop.x->ref_cnt == 2 &&
+            data->u.binop.x == temp->next->data->u.unary.y) {
+          data->u.binop.x->ref_cnt -= 2;
+          data->u.binop.x = temp->next->data->u.unary.x;
           if (temp->next->next) {
             temp->next->next->prev = temp;
           }
@@ -875,6 +866,35 @@ InterCodes RemoveTempVar(InterCodes root) {
       } break;
       case I_DEREF_L:
       case I_DEC:
+      default:
+        break;
+    }
+    temp = temp->next;
+  }
+  return root;
+}
+
+InterCodes SimplifyUselessVar(InterCodes root) {
+  InterCode data = NULL;
+  InterCodes temp = root;
+  while (temp) {
+    data = temp->data;
+    switch (data->kind) {
+      case I_ASSIGN:
+      case I_ADDR:
+      case I_DEREF_R: {
+        if (data->u.unary.x->ref_cnt == 1) {
+          DeleteICNode(temp);
+        }
+      } break;
+      case I_ADD:
+      case I_SUB:
+      case I_MUL:
+      case I_DIV: {
+        if (data->u.binop.x->ref_cnt == 1) {
+          DeleteICNode(temp);
+        }
+      } break;
       default:
         break;
     }

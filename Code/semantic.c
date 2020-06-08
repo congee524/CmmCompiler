@@ -3,6 +3,7 @@
 SymTable symtable[0x3fff + 1];
 FuncTable FuncHead;
 struct SymTabStack_ symtabstack;
+Type TypeInt, TypeFloat;
 
 void SemanticAnalysis(Node* root) {
   assert(root != NULL);
@@ -123,6 +124,7 @@ void StmtAnalysis(Node* stmt, FuncTable func) {
       CompSTAnalysis(stmt->child[0], func);
       break;
     }
+#ifdef LAB2
     case 2: {
       /* Exp SEMI */
       ExpAnalysis(stmt->child[0]);
@@ -140,17 +142,20 @@ void StmtAnalysis(Node* stmt, FuncTable func) {
       }
       break;
     }
+#endif
     case 5: {
       /* IF LP Exp RP Stmt */
       /* WHILE LP Exp RP Stmt */
       Node *exp = stmt->child[2], *n_stmt = stmt->child[4];
+#ifdef LAB2
       ExpAnalysis(exp);
-      Type temp_type = (Type)malloc(sizeof(struct Type_));
-      temp_type->kind = BASIC, temp_type->u.basic = 0;
-      if (!CheckTypeEql(exp->eval->type, temp_type)) {
+      // Type temp_type = (Type)malloc(sizeof(struct Type_));
+      // temp_type->kind = BASIC, temp_type->u.basic = 0;
+      if (!CheckTypeEql(exp->eval->type, TypeInt)) {
         SemanticError(7, exp->line, "Wrong type of conditional statement");
       }
-      free(temp_type);
+#endif
+      // free(temp_type);s
       StmtAnalysis(n_stmt, func);
       break;
     }
@@ -158,19 +163,21 @@ void StmtAnalysis(Node* stmt, FuncTable func) {
       /* IF LP Exp RP Stmt ELSE Stmt */
       Node *exp = stmt->child[2], *stmt_1 = stmt->child[4],
            *stmt_2 = stmt->child[6];
+#ifdef LAB2
       ExpAnalysis(exp);
-      Type temp_type = (Type)malloc(sizeof(struct Type_));
-      temp_type->kind = BASIC, temp_type->u.basic = 0;
-      if (!CheckTypeEql(exp->eval->type, temp_type)) {
+      // Type temp_type = (Type)malloc(sizeof(struct Type_));
+      // temp_type->kind = BASIC, temp_type->u.basic = 0;
+      if (!CheckTypeEql(exp->eval->type, TypeInt)) {
         SemanticError(7, exp->line, "Wrong type of conditional statement");
       }
-      free(temp_type);
+#endif
+      // free(temp_type);
       StmtAnalysis(stmt_1, func);
       StmtAnalysis(stmt_2, func);
       break;
     }
     default:
-      assert(0);
+      break;
   }
 }
 
@@ -188,11 +195,11 @@ void ExtDecListAnalysis(Node* root, Type type) {
     ExtDecListAnalysis(root->child[2], type);
   }
 
-  Type new_var = (Type)malloc(sizeof(struct Type_));
+  // Type new_var = (Type)malloc(sizeof(struct Type_));
   int dim = 0, *size = (int*)malloc(256 * sizeof(int)), m_size = 256;
   char* name = TraceVarDec(root->child[0], &dim, size, &m_size);
 
-  new_var = ConstArray(type, dim, size, 0);
+  Type new_var = ConstArray(type, dim, size, 0);
   AddSymTab(name, new_var, root->line);
 }
 
@@ -313,6 +320,8 @@ void ExpAnalysis(Node* exp) {
   }
 
   exp->eval = (ExpNode)malloc(sizeof(struct ExpNode_));
+  exp->eval->type = TypeInt;
+  exp->eval->isRight = 0;
 
   switch (exp->n_child) {
     case 1: {
@@ -330,29 +339,31 @@ void ExpAnalysis(Node* exp) {
           sprintf(msg, "Variable \"%s\" has not been defined", obj->ident);
           SemanticError(1, obj->line, msg);
           /* treat it as int */
-          eval->type = (Type)malloc(sizeof(struct Type_));
-          eval->type->kind = BASIC;
-          eval->type->u.basic = 0;
+          // eval->type = (Type)malloc(sizeof(struct Type_));
+          // eval->type->kind = BASIC;
+          // eval->type->u.basic = 0;
+          eval->type = TypeInt;
         }
       } else if (!strcmp(obj->symbol, "INT")) {
         ExpNode eval = exp->eval;
         eval->isRight = 1;
         eval->val = obj->ival;
-        eval->type = (Type)malloc(sizeof(struct Type_));
-        eval->type->kind = BASIC;
-        eval->type->u.basic = 0;
+        // eval->type = (Type)malloc(sizeof(struct Type_));
+        // eval->type->kind = BASIC;
+        // eval->type->u.basic = 0;
+        eval->type = TypeInt;
       } else if (!strcmp(obj->symbol, "FLOAT")) {
         ExpNode eval = exp->eval;
         eval->isRight = 1;
         eval->val = obj->fval;
-        eval->type = (Type)malloc(sizeof(struct Type_));
-        eval->type->kind = BASIC;
-        eval->type->u.basic = 1;
+        // eval->type = (Type)malloc(sizeof(struct Type_));
+        // eval->type->kind = BASIC;
+        // eval->type->u.basic = 1;
+        eval->type = TypeFloat;
       } else {
         assert(0);
       }
-      break;
-    }
+    } break;
     case 2: {
       /* 2 nodes */
       Node *ope = exp->child[0], *obj = exp->child[1];
@@ -376,8 +387,7 @@ void ExpAnalysis(Node* exp) {
       } else {
         assert(0);
       }
-      break;
-    }
+    } break;
     case 3: {
       /* 3 nodes */
       if (!strcmp(exp->child[2]->symbol, "Exp")) {
@@ -520,12 +530,12 @@ void ExpAnalysis(Node* exp) {
         ExpAnalysis(obj);
         ExpAnalysis(coord);
         memcpy(exp->eval, obj->eval, sizeof(struct ExpNode_));
-        Type temp_type = (Type)malloc(sizeof(struct Type_));
-        temp_type->kind = BASIC, temp_type->u.basic = 0;
-        if (!CheckTypeEql(coord->eval->type, temp_type)) {
+        // Type temp_type = (Type)malloc(sizeof(struct Type_));
+        // temp_type->kind = BASIC, temp_type->u.basic = 0;
+        if (!CheckTypeEql(coord->eval->type, TypeInt)) {
           SemanticError(12, coord->line, "NonInteger in array access operator");
         }
-        temp_type->kind = ARRAY;
+        // temp_type->kind = ARRAY;
         // if (!CheckTypeEql(obj->eval->type, temp_type)) {
         if (obj->eval->type->kind != ARRAY) {
           SemanticError(10, obj->line,
@@ -534,7 +544,7 @@ void ExpAnalysis(Node* exp) {
           exp->eval->type = obj->eval->type->u.array.elem;
           exp->eval->isRight = 0;
         }
-        free(temp_type);
+        // free(temp_type);
       } else {
         assert(0);
       }
@@ -567,12 +577,14 @@ Type SpecAnalysis(Node* spec) {
   Node* tmp = spec->child[0];
 
   if (!strcmp(tmp->symbol, "TYPE")) {
-    ret = (Type)malloc(sizeof(struct Type_));
-    ret->kind = BASIC;
+    // ret = (Type)malloc(sizeof(struct Type_));
+    // ret->kind = BASIC;
     if (!strcmp(tmp->ident, "int")) {
-      ret->u.basic = 0;
+      // ret->u.basic = 0;
+      ret = TypeInt;
     } else if (!strcmp(tmp->ident, "float")) {
-      ret->u.basic = 1;
+      // ret->u.basic = 1;
+      ret = TypeFloat;
     } else {
       assert(0);
     }
@@ -628,6 +640,13 @@ Type StructSpecAnalysis(Node* struct_spec) {
 }
 
 void InitSA() {
+  TypeInt = (Type)malloc(sizeof(struct Type_));
+  TypeInt->kind = BASIC;
+  TypeInt->u.basic = 0;
+  TypeFloat = (Type)malloc(sizeof(struct Type_));
+  TypeFloat->kind = BASIC;
+  TypeFloat->u.basic = 1;
+
   for (int i = 0; i <= 0x3fff; i++) {
     symtable[i] = NULL;
   }
@@ -638,13 +657,9 @@ void InitSA() {
   symtabstack.StructHead = (FieldList)malloc(sizeof(struct FieldList_));
   symtabstack.StructHead->next = NULL;
 
-  Type temp_type = (Type)malloc(sizeof(struct Type_));
-  temp_type->kind = BASIC;
-  temp_type->u.basic = 0;
-
   FuncTable read = (FuncTable)malloc(sizeof(struct FuncTable_));
   read->name = strdup("read");
-  read->ret_type = temp_type;
+  read->ret_type = TypeInt;
   read->isDefined = 1;
   read->op_func = NULL;
   read->para = NULL;
@@ -653,10 +668,10 @@ void InitSA() {
 
   FuncTable write = (FuncTable)malloc(sizeof(struct FuncTable_));
   write->name = strdup("write");
-  write->ret_type = temp_type;
+  write->ret_type = TypeInt;
   write->isDefined = 1;
   write->para = (FieldList)malloc(sizeof(struct FieldList_));
-  write->para->type = temp_type;
+  write->para->type = TypeInt;
   write->op_func = NULL;
   write->para->next = NULL;
   write->next = NULL;
