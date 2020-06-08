@@ -423,6 +423,24 @@ void CheckFuncDefined() {
 
 /*============= translate =============*/
 
+InterCodes SimplifyPlace(InterCodes code, Operand place, int isVar) {
+  if (code == NULL) return code;
+  InterCodes temp = code;
+  while (temp->next) {
+    temp = temp->next;
+  }
+  if (temp->data->kind == I_ASSIGN && temp->data->u.assign.x == place &&
+      !(isVar && temp->data->u.assign.y->kind != OP_VAR)) {
+    memcpy(place, temp->data->u.assign.y, sizeof(struct Operand_));
+    if (temp != code) {
+      temp->prev->next = NULL;
+    } else {
+      code = NULL;
+    }
+  }
+  return code;
+}
+
 void AddArgs(ArgList arg_list, Operand t1) {
   ArgList new_arg = (ArgList)malloc(sizeof(struct ArgList_));
   new_arg->arg = t1;
@@ -493,6 +511,11 @@ InterCodes GetAddr(Node* exp, Operand addr) {
 }
 
 InterCodes JointCodes(InterCodes code1, InterCodes code2) {
+  if (code1 == NULL && code2 == NULL) {
+    InterCodes ret = (InterCodes)malloc(sizeof(struct InterCodes_));
+    ret->prev = NULL, ret->next = NULL, ret->data = NULL;
+    return ret;
+  }
   if (code1 == NULL) return code2;
   if (code2 == NULL) return code1;
   InterCodes temp = code1;
@@ -685,90 +708,113 @@ char* RelopName(RELOP_TYPE relop) {
   }
 }
 
+InterCodes RemoveNull(InterCodes root) {
+  InterCode data = NULL;
+  while (root && root->data == NULL) {
+    root = root->next;
+  }
+  InterCodes temp = root;
+  while (temp) {
+    data = temp->data;
+    if (data == NULL) {
+      if (temp->prev) {
+        temp->prev->next = temp->next;
+      }
+      if (temp->next) {
+        temp->next->prev = temp->prev;
+      }
+    }
+    temp = temp->next;
+  }
+  return root;
+}
+
 void CalRefCnt(InterCodes root) {
   InterCode data = NULL;
   InterCodes temp = root;
   while (temp) {
     data = temp->data;
-    switch (data->kind) {
-      case I_LABEL: {
-        /* LABEL x : */
-        data->u.label.x->ref_cnt++;
-      } break;
-      case I_FUNC: {
-        /* FUNCTION f : */
-        data->u.func.f->ref_cnt++;
-      } break;
-      case I_ASSIGN: {
-        /* x := y */
-        data->u.unary.x->ref_cnt++;
-        data->u.unary.y->ref_cnt++;
-      } break;
-      case I_ADD:
-      case I_SUB:
-      case I_MUL:
-      case I_DIV: {
-        /* x y z */
-        data->u.binop.x->ref_cnt++;
-        data->u.binop.y->ref_cnt++;
-        data->u.binop.z->ref_cnt++;
-      } break;
-      case I_ADDR: {
-        /* x := &y */
-        data->u.unary.x->ref_cnt++;
-        data->u.unary.y->ref_cnt++;
-      } break;
-      case I_DEREF_R: {
-        /* x := *y */
-        data->u.unary.x->ref_cnt++;
-        data->u.unary.y->ref_cnt++;
-      } break;
-      case I_DEREF_L: {
-        /* *x := y */
-        data->u.unary.x->ref_cnt++;
-        data->u.unary.y->ref_cnt++;
-      } break;
-      case I_JMP: {
-        /* GOTO x */
-        data->u.jmp.x->ref_cnt++;
-      } break;
-      case I_JMP_IF: {
-        /* IF x [relop] y GOTO z */
-        data->u.jmp_if.x->ref_cnt++;
-        data->u.jmp_if.y->ref_cnt++;
-        data->u.jmp_if.z->ref_cnt++;
-      } break;
-      case I_RETURN: {
-        /* RETURN x */
-        data->u.ret.x->ref_cnt++;
-      } break;
-      case I_DEC: {
-        /* DEC x [size] */
-        data->u.dec.x->ref_cnt++;
-      } break;
-      case I_ARG: {
-        /* ARG x */
-        data->u.arg.x->ref_cnt++;
-      } break;
-      case I_CALL: {
-        /* x := CALL f */
-        data->u.call.x->ref_cnt++;
-        data->u.call.f->ref_cnt++;
-      } break;
-      case I_PARAM: {
-        /* PARAM x */
-        data->u.param.x->ref_cnt++;
-      } break;
-      case I_READ: {
-        /* READ x */
-        data->u.read.x->ref_cnt++;
-      } break;
-      case I_WRITE: {
-        /* WRITE x */
-        data->u.write.x->ref_cnt++;
-      } break;
-      default:
-        break;
+    if (data) {
+      switch (data->kind) {
+        case I_LABEL: {
+          /* LABEL x : */
+          data->u.label.x->ref_cnt++;
+        } break;
+        case I_FUNC: {
+          /* FUNCTION f : */
+          data->u.func.f->ref_cnt++;
+        } break;
+        case I_ASSIGN: {
+          /* x := y */
+          data->u.unary.x->ref_cnt++;
+          data->u.unary.y->ref_cnt++;
+        } break;
+        case I_ADD:
+        case I_SUB:
+        case I_MUL:
+        case I_DIV: {
+          /* x y z */
+          data->u.binop.x->ref_cnt++;
+          data->u.binop.y->ref_cnt++;
+          data->u.binop.z->ref_cnt++;
+        } break;
+        case I_ADDR: {
+          /* x := &y */
+          data->u.unary.x->ref_cnt++;
+          data->u.unary.y->ref_cnt++;
+        } break;
+        case I_DEREF_R: {
+          /* x := *y */
+          data->u.unary.x->ref_cnt++;
+          data->u.unary.y->ref_cnt++;
+        } break;
+        case I_DEREF_L: {
+          /* *x := y */
+          data->u.unary.x->ref_cnt++;
+          data->u.unary.y->ref_cnt++;
+        } break;
+        case I_JMP: {
+          /* GOTO x */
+          data->u.jmp.x->ref_cnt++;
+        } break;
+        case I_JMP_IF: {
+          /* IF x [relop] y GOTO z */
+          data->u.jmp_if.x->ref_cnt++;
+          data->u.jmp_if.y->ref_cnt++;
+          data->u.jmp_if.z->ref_cnt++;
+        } break;
+        case I_RETURN: {
+          /* RETURN x */
+          data->u.ret.x->ref_cnt++;
+        } break;
+        case I_DEC: {
+          /* DEC x [size] */
+          data->u.dec.x->ref_cnt++;
+        } break;
+        case I_ARG: {
+          /* ARG x */
+          data->u.arg.x->ref_cnt++;
+        } break;
+        case I_CALL: {
+          /* x := CALL f */
+          data->u.call.x->ref_cnt++;
+          data->u.call.f->ref_cnt++;
+        } break;
+        case I_PARAM: {
+          /* PARAM x */
+          data->u.param.x->ref_cnt++;
+        } break;
+        case I_READ: {
+          /* READ x */
+          data->u.read.x->ref_cnt++;
+        } break;
+        case I_WRITE: {
+          /* WRITE x */
+          data->u.write.x->ref_cnt++;
+        } break;
+        default:
+          break;
+      }
     }
     temp = temp->next;
   }
@@ -784,6 +830,7 @@ void DeleteIRNode(InterCodes to_del) {
 }
 
 InterCodes SimplifyAssign(InterCodes to_simp) {
+  // TODO()
   IC_TYPE kind = to_simp->data->kind;
   Operand x = to_simp->next->data->u.unary.x, y = to_simp->data->u.unary.y;
   InterCodes new_code = MakeICNode(kind, x, y);
@@ -808,31 +855,26 @@ InterCodes RemoveTempVar(InterCodes root) {
     switch (data->kind) {
       case I_ASSIGN:
       case I_ADDR:
-      case I_DEREF_R: {
-        /* x y */
-        if (temp->next && temp->next->data->kind == I_ASSIGN &&
-            data->u.unary.x->ref_cnt == 2 &&
-            data->u.unary.x == temp->next->data->u.unary.y) {
-          /* change t1 = v1, v2 = t1 to v2 = v1*/
-          temp = SimplifyAssign(temp);
-          data = temp->data;
-        }
-        if (data->u.unary.x->ref_cnt == 1) DeleteIRNode(temp);
-      } break;
-      case I_DEREF_L:
+      case I_DEREF_R:
       case I_ADD:
       case I_SUB:
       case I_MUL:
       case I_DIV: {
-        /* x y z */
-        if (data->u.binop.x->ref_cnt == 1) {
-          DeleteIRNode(temp);
+        if (temp->next && temp->next->data->kind == I_ASSIGN &&
+            data->u.unary.x->ref_cnt == 2 &&
+            data->u.unary.x == temp->next->data->u.unary.y) {
+          /* change t1 = v1, v2 = t1 to v2 = v1*/
+          // temp = SimplifyAssign(temp);
+          // data = temp->data;
+          data->u.unary.x = temp->next->data->u.unary.x;
+          if (temp->next->next) {
+            temp->next->next->prev = temp;
+          }
+          temp->next = temp->next->next;
         }
       } break;
-      case I_DEC: {
-        /* DEC x [size] */
-        if (data->u.dec.x->ref_cnt == 1) DeleteIRNode(temp);
-      } break;
+      case I_DEREF_L:
+      case I_DEC:
       default:
         break;
     }

@@ -332,6 +332,8 @@ int CheckLogicOPE(Node *exp);
 
 int CheckArithOPE(Node *obj1, Node *obj2);
 
+InterCodes SimplifyPlace(InterCodes code, Operand place, int isVar);
+
 void AddArgs(ArgList arg_list, Operand t1);
 
 Operand LookupOpe(char *name);
@@ -363,6 +365,8 @@ char *OpeName(Operand ope);
 char *RelopName(RELOP_TYPE relop);
 
 void DeleteIRNode(InterCodes to_del);
+
+InterCodes RemoveNull(InterCodes root);
 
 void CalRefCnt(InterCodes root);
 
