@@ -247,7 +247,11 @@ struct AsmOpe_ {
     int ival;
     int no;
     char *ident;
-  };
+    struct {
+      AsmOpe addr;
+      int off;
+    }
+  } u;
 };
 
 struct AsmCode_ {
@@ -276,11 +280,13 @@ struct RegDesp_ {
 };
 
 extern RegDesp Reg[32];
+extern AsmOpe RegOpe[32];
 #define Reg_v0 Reg[2]
 #define Reg_gp Reg[28]
 #define Reg_sp Reg[29]
 #define Reg_fp Reg[30]
 #define Reg_ra Reg[31]
+#define _fp 30
 
 struct VarDesp_ {
   Operand var;

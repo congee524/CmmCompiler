@@ -53,7 +53,27 @@ AsmCodes MakeACNode(AC_TYPE kind, ...) {
 AsmOpe NewLabAsmOpe(char *lab) {
   AsmOpe ret = (AsmOpe)malloc(sizeof(struct AsmOpe_));
   ret->kind = AO_LABEL;
-  ret->ident = lab;
+  ret->u.ident = lab;
+  return ret;
+}
+
+AsmOpe GetRegAsmOpe(int reg_no) {
+  assert(reg_no >= 0 && reg_no < 32);
+  return RegOpe[reg_no];
+}
+
+AsmOpe NewAddrAsmOpe(AsmOpe addr, int off) {
+  AsmOpe ret = (AsmOpe)malloc(sizeof(struct AsmOpe_));
+  ret->kind = AO_ADDR;
+  ret->u.addr = addr;
+  ret->u.off = off;
+  return ret;
+}
+
+AsmOpe NewImmdAsmOpe(int ival) {
+  AsmOpe ret = (AsmOpe)malloc(sizeof(struct AsmOpe_));
+  ret->kind = AO_IMMD;
+  ret->u.ival = ival;
   return ret;
 }
 
@@ -199,41 +219,82 @@ int GetInactiveReg(InterCodes pre) {
   UpdateRegNextRef(pre);
   int ret = 8, temp_ref = Reg[8].next_ref;
   for (int i = 8; i < 26; i++) {
-    if (Reg[i].next_ref == -1) {
-      ret = i;
-      break;
-    }
+    if (Reg[i].next_ref == -1) return i;
     if (Reg[i].next_ref > temp_ref) {
       ret = i, temp_ref = Reg[i].next_ref;
     }
   }
-  Spill(ret);
   return ret;
 }
 
 void Spill(int reg_no) {
   Operand ope = Reg[reg_no].var;
   assert(ope != NULL && (ope->kind == OP_TEMP || ope->kind == OP_VAR));
-  TODO()
+  VarDesp ope_desp = LookupVarDesp(ope);
+  assert(ope_desp->in_stack);
+  AsmOpe op_src = GetRegAsmOpe(reg_no);
+  AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_fp), ope_desp->offset);
+  AsmCodes sw_code = MakeACNode(A_SW, op_src, op_addr);
+  AddACCode(sw_code);
+  ope_desp->in_reg = false, ope_desp->reg_no = -1;
 }
 
-int Allocate(Operand ope, InterCodes pre) {
+void SpillAll() {
+  for (int i = 8; i < 26; i++) {
+    if (Reg[i].var) Spill(i);
+  }
+}
+
+int Allocate(InterCodes pre) {
   for (int i = 8; i < 26; i++) {
     if (Reg[i].var == NULL) return i;
   }
   int ret = GetInactiveReg(pre);
+  Spill(ret);
+  return ret;
 }
 
-int Ensure(Operand ope, InterCodes pre) {
+int Ensure(Operand ope, InterCodes pre, bool isload) {
   int ret = -1;
   VarDesp ope_desp = LookupVarDesp(ope);
   assert(ope_desp != NULL);
   if (ope_desp->in_reg) {
     ret = ope_desp->reg_no;
   } else {
-    ret = Allocate(ope);
-    // emit MIPS32 code [lw result, x]
-    TODO()
+    ret = Allocate(pre);
+    ope_desp->in_reg = true, ope_desp->reg_no = ret;
+    if (isload) {
+      // emit MIPS32 code [lw result, x]
+      assert(ope_desp->in_stack);
+      AsmOpe op_des = GetRegAsmOpe(ret);
+      AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_fp), ope_desp->offset);
+      AsmCodes lw_code = MakeACNode(A_LW, op_des, op_addr);
+      AddACCode(lw_code);
+    }
   }
   return ret;
+}
+
+int GetReg(Operand ope, InterCodes pre, bool isload) {
+  int ret = -1;
+  if (ope->kind == OP_TEMP || ope->kind == OP_VAR) {
+    ret = Ensure(ope, pre, isload);
+  } else {
+    assert(ope->kind == OP_CONST_INT && isload);
+    ret = Allocate(pre);
+    AsmOpe op_des = GetRegAsmOpe(ret);
+    AsmOpe op_immd = NewImmdAsmOpe(ope->u.ival);
+    AsmCodes li_code = MakeACNode(A_LI, op_des, op_immd);
+    AddACCode(li_code);
+  }
+  return ret;
+}
+
+void FreeReg(int reg_no) {
+  VarDesp ope_desp = LookupVarDesp(Reg[reg_no].var);
+  assert(ope_desp->in_reg);
+  ope_desp->in_reg = false;
+  ope_desp->reg_no = -1;
+  Reg[reg_no].var = NULL;
+  Reg[reg_no].next_ref = -1;
 }

@@ -4,6 +4,7 @@ AsmCodes ACHead;
 int* BasicBlock;
 int BlockSize, BlockCnt;
 RegDesp Reg[32];
+AsmOpe RegOpe[32];
 VarDesp vardesptable[0x3fff];
 
 void Asm() {
@@ -22,6 +23,9 @@ void AsmInit() {
   for (int i = 0; i < 32; i++) {
     Reg[i].var = NULL;
     Reg[i].next_ref = -1;
+    RegOpe[i] = (AsmOpe)malloc(sizeof(struct AsmOpe_));
+    RegOpe[i]->kind = AO_REG;
+    RegOpe[i]->u.no = i;
   }
 
   for (int i = 0; i < 0x3fff; i++) {
@@ -30,10 +34,67 @@ void AsmInit() {
   }
 }
 
-void AsmFromLabel(InterCode data) {
+void AsmFromLabel(InterCodes IC) {
+  InterCode data = IC->data;
   AsmOpe lab = NewLabAsmOpe(OpeName(data->u.label.x));
   AsmCodes label_code = MakeACNode(A_LABEL, lab);
   AddACCode(label_code);
+}
+
+void AsmFromAssign(InterCodes IC) {
+  /* x = y[var|immd] */
+  InterCode data = IC->data;
+  Operand x = data->u.assign.x, y = data->u.assign.y;
+  AsmOpe op_des = GetRegAsmOpe(GetReg(x, IC, false));
+  if (y->kind == OP_CONST_INT) {
+    AsmOpe op_immd = NewImmdAsmOpe(y->u.ival);
+    AddACCode(MakeACNode(A_LI, op_des, op_immd));
+  } else {
+    AsmOpe op_src = GetRegAsmOpe(GetReg(y, IC, true));
+    AddACCode(MakeACNode(A_MOVE, op_des, op_src));
+  }
+}
+
+void AsmFromAddr(InterCodes IC) {
+  /* x = &y */
+  InterCode data = IC->data;
+  Operand x = data->u.addr.x, y = data->u.addr.y;
+  AsmOpe op_des = GetRegAsmOpe(GetReg(x, IC, false));
+  VarDesp y_desp = LookupVarDesp(y);
+  AsmOpe op_src = GetRegAsmOpe(Allocate(IC));
+  AsmOpe op_fp = GetRegAsmOpe(_fp);
+  AsmOpe op_off = NewImmdAsmOpe(op_des->offset);
+  AddACCode(MakeACNode(A_ADDI, op_src, op_fp, op_off));
+  AddACCode(MakeACNode(A_Move, op_des, op_src));
+}
+
+void AsmFromBinaryOpe(InterCodes IC) {
+  /* x = y op z */
+  InterCode data = IC->data;
+  Operand x = data->u.binop.x, y = data->u.binop.y, z = data->u.binop.z;
+  int ry = GetReg(y, IC, true), rz = GetReg(z, IC, true);
+  int rx = GetReg(x, IC, false);
+  AsmOpe x = GetRegAsmOpe(rx), y = GetRegAsmOpe(ry), z = GetRegAsmOpe(rz);
+  switch (data->kind) {
+    case I_ADD: {
+      AddACCode(MakeACNode(A_ADD, x, y, z))
+    } break;
+    case I_SUB: {
+      AddACCode(MakeACNode(A_SUB, x, y, z))
+    } break;
+    case I_MUL: {
+      AddACCode(MakeACNode(A_MUL, x, y, z));
+    } break;
+    case I_DIV: {
+      AddACCode(MakeACNode(A_DIV, y, z));
+      AddACCode(MakeACNode(A_MFLO, x));
+    } break;
+    default:
+      assert(0);
+  }
+  UpdateRegNextRef(IC);
+  if (Reg[ry].next_ref == -1) FreeReg(ry);
+  if (Reg[rz].next_ref == -1) FreeReg(rz);
 }
 
 void TranslateAsm(InterCodes IC) {
@@ -43,28 +104,22 @@ void TranslateAsm(InterCodes IC) {
     data = temp->data;
     switch (data->kind) {
       case I_LABEL: {
-        AsmFromLabel(data);
+        AsmFromLabel(temp);
       } break; /* LABEL x : */
       case I_FUNC: {
         TODO()
       } break; /* FUNCTION f : */
       case I_ASSIGN: {
-        TODO()
+        AsmFromAssign(temp);
       } break; /* x := y */
-      case I_ADD: {
-        TODO()
-      } break; /* x := y + z */
-      case I_SUB: {
-        TODO()
-      } break; /* x := y - z */
-      case I_MUL: {
-        TODO()
-      } break; /* x := y * z */
+      case I_ADD:
+      case I_SUB:
+      case I_MUL:
       case I_DIV: {
-        TODO()
-      } break; /* x := y / z */
+        AsmFromBinaryOpe(temp);
+      } break; /* x := y [+-/*] z */
       case I_ADDR: {
-        TODO()
+        AsmFromAddr(temp);
       } break; /* x := &y */
       case I_DEREF_R: {
         TODO()
