@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <malloc.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +45,12 @@ typedef struct Operand_ *Operand;
 typedef struct ArgList_ *ArgList;
 typedef struct InterCode_ *InterCode;
 typedef struct InterCodes_ *InterCodes;
+
+typedef struct AsmOpe_ *AsmOpe;
+typedef struct AsmCode_ *AsmCode;
+typedef struct AsmCodes_ *AsmCodes;
+typedef struct RegDesp_ RegDesp;
+typedef struct VarDesp_ *VarDesp;
 
 struct ExpNode_ {
   int isRight;
@@ -126,13 +133,12 @@ struct Operand_ {
     OP_VAR,
     OP_CONST_INT,
     OP_CONST_FLOAT,
-    OP_ADDR,
     OP_LABEL,
     OP_FUNC
   } kind;
   union {
     int var_no;
-    int value;
+    int ival;
     float fval;
     char *id;
   } u;
@@ -182,7 +188,7 @@ struct InterCode_ {
   union {
     struct {
       Operand x;
-    } label, jmp, ret, arg, param, read, write, single;
+    } label, jmp, ret, arg, param, read, write, unitary;
     struct {
       Operand f;
     } func;
@@ -208,16 +214,114 @@ struct InterCode_ {
 
 struct InterCodes_ {
   InterCode data;
-  struct InterCodes_ *prev;
-  struct InterCodes_ *next;
+  InterCodes prev, next;
+  int lineno;
+};
+
+typedef enum AC_TYPE {
+  A_LABEL = 0, /* lab: */
+  A_J,         /* j lab */
+  A_JAL,       /* jal lab */
+  A_JR,        /* jr src1 */
+  A_MFLO,      /* mflo des */
+  A_DIV,       /* div src1, reg2 */
+  A_LI,        /* li des, immd */
+  A_MOVE,      /* move des, src1 */
+  A_LW,        /* lw des, addr */
+  A_SW,        /* sw src1, addr */
+  A_ADDI,      /* addi des, src1, immd */
+  A_ADD,       /* add des, src1, src2 */
+  A_SUB,       /* sub des, src1, src2 */
+  A_MUL,       /* mul des, src1, src2 */
+  A_BEQ,       /* beq src1, src2, lab */
+  A_BNE,       /* bne src1, src2, lab */
+  A_BGT,       /* bgt src1, src2, lab */
+  A_BLT,       /* blt src1, src2, lab */
+  A_BGE,       /* bge src1, src2, lab */
+  A_BLE        /* ble src1, src2, lab */
+} AC_TYPE;
+
+struct AsmOpe_ {
+  enum { AO_REG, AO_ADDR, AO_IMMD, AO_LABEL } kind;
+  union {
+    int ival;
+    int no;
+    char *ident;
+  };
+};
+
+struct AsmCode_ {
+  AC_TYPE kind;
+  union {
+    struct {
+      AsmOpe op1;
+    } unary;
+    struct {
+      AsmOpe op1, op2;
+    } binary;
+    struct {
+      AsmOpe op1, op2, op3;
+    } ternary;
+  } u;
+};
+
+struct AsmCodes_ {
+  AsmCode data;
+  AsmCodes prev, next;
+};
+
+struct RegDesp_ {
+  Operand var;
+  int next_ref;
+};
+
+extern RegDesp Reg[32];
+#define Reg_v0 Reg[2]
+#define Reg_gp Reg[28]
+#define Reg_sp Reg[29]
+#define Reg_fp Reg[30]
+#define Reg_ra Reg[31]
+
+struct VarDesp_ {
+  Operand var;
+  bool in_reg, in_stack;
+  int reg_no, offset;
+  VarDesp next;
 };
 
 extern FILE *fin, *fout;
 extern SymTable symtable[0x3fff + 1];
 extern FuncTable FuncHead;
 extern struct SymTabStack_ symtabstack;
-extern InterCodes CodeHead;
+extern InterCodes ICHead;
 extern Type TypeInt, TypeFloat;
+extern AsmCodes ACHead;
+extern int *BasicBlock;
+extern int BlockSize, BlockCnt;
+extern VarDesp vardesptable[0x3fff + 1];
+
+/*============= helper =============*/
+
+AsmCodes MakeACNode(AC_TYPE kind, ...);
+
+AsmOpe NewLabAsmOpe(char *lab);
+
+void AddACCode();
+
+void ExpandBlock();
+
+void DividBlock(InterCodes IC);
+/*============= asm =============*/
+
+void Asm();
+
+void AsmInit();
+
+void TranslateAsm(InterCodes IC);
+
+void AsmGen(AsmCodes root);
+
+void AsmFromLabel(InterCode data);
 
 /*============= semantic =============*/
 

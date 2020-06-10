@@ -1,6 +1,6 @@
 #include "symtab.h"
 
-InterCodes CodeHead;
+InterCodes ICHead;
 
 InterCodes Translate(Node *root) {
   if (root->n_child == 2) {
@@ -454,9 +454,9 @@ InterCodes TranslateArgs(Node *args, ArgList arg_list) {
 
 InterCodes OptimIRCode(InterCodes root) {
   root = RemoveNull(root);
-  CalRefCnt(root);
-  root = SimplifyAssign(root);
-  root = SimplifyUselessVar(root);
+  // CalRefCnt(root);
+  // root = SimplifyAssign(root);
+  // root = SimplifyUselessVar(root);
   return root;
 }
 

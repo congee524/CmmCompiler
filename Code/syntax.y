@@ -4,7 +4,7 @@
 
 extern int errors, yylineno;
 
-extern InterCodes CodeHead;
+extern InterCodes ICHead;
 
 int yylex();
 void yyerror(const char *s);
@@ -59,9 +59,11 @@ Program:
             /* CP2 */
             SemanticAnalysis($$);
             /* CP3 */
-            CodeHead = Translate($$);
-            // CodeHead = OptimIRCode(CodeHead);
-            IRGen(CodeHead);
+            ICHead = Translate($$);
+            ICHead = OptimIRCode(ICHead);
+            IRGen(ICHead);
+            /* CP4 */
+            // Asm();
         }
     }
 ;
