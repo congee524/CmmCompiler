@@ -148,7 +148,7 @@ VarDesp LookupVarDesp(Operand ope) {
 
 void UpdateOpeNextRef(Operand ope, int lineno) {
   if (ope->kind != OP_TEMP || ope->kind != OP_VAR) return;
-  for (int i = 8; i < 26; i++) {
+  for (int i = 8; i < 24; i++) {
     if (Reg[i].next_ref == -1 && IsSameOpe(ope, Reg[i].var)) {
       Reg[i].next_ref = lineno;
       return;
@@ -164,7 +164,7 @@ void UpdateRegNextRef(InterCodes pre) {
       break;
     }
   }
-  for (int i = 8; i < 26; i++) {
+  for (int i = 8; i < 24; i++) {
     Reg[i].next_ref = -1;
   }
   InterCodes temp = pre;
@@ -218,7 +218,7 @@ void UpdateRegNextRef(InterCodes pre) {
 int GetInactiveReg(InterCodes pre) {
   UpdateRegNextRef(pre);
   int ret = 8, temp_ref = Reg[8].next_ref;
-  for (int i = 8; i < 26; i++) {
+  for (int i = 8; i < 24; i++) {
     if (Reg[i].next_ref == -1) return i;
     if (Reg[i].next_ref > temp_ref) {
       ret = i, temp_ref = Reg[i].next_ref;
@@ -236,17 +236,18 @@ void Spill(int reg_no) {
   AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_fp), ope_desp->offset);
   AsmCodes sw_code = MakeACNode(A_SW, op_src, op_addr);
   AddACCode(sw_code);
+  Reg[reg_no].var = NULL, Reg[reg_no].next_ref = -1;
   ope_desp->in_reg = false, ope_desp->reg_no = -1;
 }
 
 void SpillAll() {
-  for (int i = 8; i < 26; i++) {
+  for (int i = 8; i < 24; i++) {
     if (Reg[i].var) Spill(i);
   }
 }
 
 int Allocate(InterCodes pre) {
-  for (int i = 8; i < 26; i++) {
+  for (int i = 8; i < 24; i++) {
     if (Reg[i].var == NULL) return i;
   }
   int ret = GetInactiveReg(pre);
@@ -275,13 +276,28 @@ int Ensure(Operand ope, InterCodes pre, bool isload) {
   return ret;
 }
 
+int AllocateImmd(InterCodes pre) {
+  int immd1_next = Reg[_immd1].next_ref;
+  int immd2_next = Reg[_immd2].next_ref;
+  if (immd1_next == -1 || immd1_next < immd2_next) {
+    assert(immd1_next < pre->lineno);
+    Reg[_immd1].next_ref = pre->lineno;
+    return _immd1;
+  } else {
+    assert(immd2_next < pre->lineno);
+    Reg[_immd2].next_ref = pre->lineno;
+    return _immd2;
+  }
+}
+
 int GetReg(Operand ope, InterCodes pre, bool isload) {
   int ret = -1;
   if (ope->kind == OP_TEMP || ope->kind == OP_VAR) {
     ret = Ensure(ope, pre, isload);
+    Reg[ret].var = ope;
   } else {
     assert(ope->kind == OP_CONST_INT && isload);
-    ret = Allocate(pre);
+    ret = AllocateImmd(pre);
     AsmOpe op_des = GetRegAsmOpe(ret);
     AsmOpe op_immd = NewImmdAsmOpe(ope->u.ival);
     AsmCodes li_code = MakeACNode(A_LI, op_des, op_immd);

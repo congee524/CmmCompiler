@@ -32,6 +32,12 @@ void AsmInit() {
     vardesptable[i] = (VarDesp)malloc(sizeof(struct VarDesp_));
     vardesptable[i]->next = NULL;
   }
+
+  // Reg 24, 25 served as immediate register
+  for (int i = 24; i < 26; i++) {
+    Reg[i].var = NewTemp();
+    Reg[i].next_ref = -1;
+  }
 }
 
 void AsmFromLabel(InterCodes IC) {
@@ -68,6 +74,24 @@ void AsmFromAddr(InterCodes IC) {
   AddACCode(MakeACNode(A_Move, op_des, op_src));
 }
 
+AsmFromDerefR(InterCodes IC) {
+  /* x = *y */
+  InterCode data = IC->data;
+  Operand x = data->u.deref_r.x, y = data->u.deref_r.y;
+  AsmOpe op_des = GetReg(x, IC, false);
+  AsmOpe op_addr = NewAddrAsmOpe(GetReg(y, IC, true), 0);
+  AddACCode(MakeACNode(A_LW, op_des, op_addr));
+}
+
+AsmFromDerefL(InterCodes IC) {
+  /* *x = y */
+  InterCode data = IC->data;
+  Operand x = data->u.deref_l.x, y = data->u.deref_l.y;
+  AsmOpe op_src = GetReg(y, IC, true);
+  AsmOpe op_addr = NewAddrAsmOpe(GetReg(x, IC, true), 0);
+  AddACCode(MakeACNode(A_SW, op_src, op_addr));
+}
+
 void AsmFromBinaryOpe(InterCodes IC) {
   /* x = y op z */
   InterCode data = IC->data;
@@ -97,6 +121,16 @@ void AsmFromBinaryOpe(InterCodes IC) {
   if (Reg[rz].next_ref == -1) FreeReg(rz);
 }
 
+void PushLocalVarOnStack(InterCodes IC) { TODO() }
+
+void AsmFromFunc(InterCodes IC) {
+  InterCode data = IC->data;
+  TODO()
+  PushLocalVarOnStack(IC);
+}
+
+void AsmFromCall(InterCodes IC) { SpillAll(); }
+
 void TranslateAsm(InterCodes IC) {
   InterCodes temp = IC;
   InterCode data = NULL;
@@ -107,7 +141,7 @@ void TranslateAsm(InterCodes IC) {
         AsmFromLabel(temp);
       } break; /* LABEL x : */
       case I_FUNC: {
-        TODO()
+        AsmFromFunc(temp);
       } break; /* FUNCTION f : */
       case I_ASSIGN: {
         AsmFromAssign(temp);
@@ -122,10 +156,10 @@ void TranslateAsm(InterCodes IC) {
         AsmFromAddr(temp);
       } break; /* x := &y */
       case I_DEREF_R: {
-        TODO()
+        AsmFromDerefR(temp);
       } break; /* x := *y */
       case I_DEREF_L: {
-        TODO()
+        AsmFromDerefL(temp);
       } break; /* *x := y */
       case I_JMP: {
         TODO()
@@ -143,7 +177,7 @@ void TranslateAsm(InterCodes IC) {
         TODO()
       } break; /* ARG x */
       case I_CALL: {
-        TODO()
+        AsmFromCall(temp);
       } break; /* x := CALL f */
       case I_PARAM: {
         TODO()
