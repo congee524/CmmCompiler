@@ -121,12 +121,79 @@ void AsmFromBinaryOpe(InterCodes IC) {
   if (Reg[rz].next_ref == -1) FreeReg(rz);
 }
 
-void PushLocalVarOnStack(InterCodes IC) { TODO() }
+void PushVarOnStack(Operand ope, int* offset) {
+  if (ope->kind != OP_TEMP || ope->kind != OP_VAR) return;
+  VarDesp var_desp = AddVarDespTab(ope);
+  ShiftStackPointer(4);
+  *offset = *offset + 4;
+  var_desp->in_stack = true, var_desp->offset = -(*offset);
+}
+
+void PushAllLocalVarOnStack(InterCodes IC) {
+  int offset = 0;
+  InterCodes var_detector = IC;
+  InterCode data = NULL;
+  while (var_detector->next) {
+    var_detector = var_detector->next;
+    data = var_detector->data;
+    if (data->kind == I_FUNC) break;
+    swtich(data->kind) {
+      case I_LABEL:
+      case I_FUNC:
+      case I_JMP: {
+      } break;
+      case I_DEC: {
+        PushVarOnStack(data->u.dec.x, &offset);
+      } break; /* DEC x [size] */
+      case I_CALL: {
+        PushVarOnStack(data->u.call.x, &offset);
+      } break; /* x := CALL f */
+      case I_RETURN:
+      case I_ARG:
+      case I_PARAM:
+      case I_READ:
+      case I_WRITE: {
+        PushVarOnStack(data->u.unitary.x, &offset);
+      } break; /* ret|arg|param|read|write x */
+      case I_ASSIGN:
+      case I_ADDR:
+      case I_DEREF_R:
+      case I_DEREF_L: {
+        PushVarOnStack(data->u.unary.x, &offset);
+        PushVarOnStack(data->u.unary.y);
+      } break; /* []x = []y */
+      case I_JMP_IF: {
+        PushVarOnStack(data->u.jmp_if.x, &offset);
+        PushVarOnStack(data->u.jmp_if.y, &offset);
+      } break; /* IF x [relop] y GOTO z */
+      case I_ADD:
+      case I_SUB:
+      case I_MUL:
+      case I_DIV: {
+        PushVarOnStack(data->u.binop.x, &offset);
+        PushVarOnStack(data->u.binop.y, &offset);
+        PushVarOnStack(data->u.binop.z, &offset);
+      } break; /* x = y op z */
+      default:
+        assert(0);
+    }
+  }
+}
 
 void AsmFromFunc(InterCodes IC) {
   InterCode data = IC->data;
-  TODO()
-  PushLocalVarOnStack(IC);
+
+  /* func_name: */
+  char* func_name = OpeName(data->u.func.f);
+  AsmOpe op_func = NewLabAsmOpe(func_name);
+  AddACCode(MakeACNode(A_LABEL, op_func));
+
+  /* Update sp fp */
+  AsmOpe op_sp = GetRegAsmOpe(_sp), op_fp = GetRegAsmOpe(_fp);
+  AddACCode(MakeACNode(A_MOVE, op_fp, op_sp));
+
+  /* push all local var in the function onto stack */
+  PushAllLocalVarOnStack(IC);
 }
 
 void AsmFromArg(InterCodes IC) {
@@ -167,9 +234,22 @@ void AsmFromCall(InterCodes IC) {
   AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 0);
   AddACCode(MakeACNode(A_SW, op_ra, op_addr));
 
+  /* push frame pointer onto stack */
+  ShiftStackPointer(-4);
+  AsmOpe op_fp = GetRegAsmOpe(_fp);
+  AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 0);
+  AddACCode(MakeACNode(A_SW, op_fp, op_addr));
+
   /* jal func */
-  AsmOpe op_lab = NewLabAsmOpe(OpeName(data->u.call.f));
-  AddACCode(MakeACNode(A_JAL, op_lab));
+  AsmOpe op_f = NewLabAsmOpe(OpeName(data->u.call.f));
+  AddACCode(MakeACNode(A_JAL, op_f));
+
+  /* recover fp and sp */
+  AsmOpe op_fp = GetRegAsmOpe(_fp), op_sp = GetRegAsmOpe(_sp);
+  AddACCode(MakeACNode(A_MOVE, op_sp, op_fp));
+  AsmOpe op_addr = NewAddrAsmOpe(op_sp, 0);
+  AddACCode(MakeACNode(A_lw, op_fp, op_addr));
+  ShiftStackPointer(4);
 
   /* recover return address from stack */
   AsmOpe op_ra = GetRegAsmOpe(_ra);
@@ -177,7 +257,7 @@ void AsmFromCall(InterCodes IC) {
   AddACCode(MakeACNode(A_LW, op_ra, op_addr));
   ShiftStackPointer(4);
 
-  /* reduce stack for discarding args */
+  /* shrink stack for discarding args */
   ShiftStackPointer(4 * args_cnt);
 
   /* store the return value */

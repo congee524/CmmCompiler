@@ -146,6 +146,20 @@ VarDesp LookupVarDesp(Operand ope) {
   return NULL;
 }
 
+VarDesp AddVarDespTab(Operand ope) {
+  assert(ope->kind == OP_TEMP || ope->kind == OP_VAR);
+  VarDesp ret = vardesptable[hash_ope(ope)];
+  while (ret->next) {
+    ret = ret->next;
+    if (IsSameOpe(ope, temp->var)) assert(0);
+  }
+  ret->next = (VarDesp)malloc(sizeof(struct VarDesp_));
+  ret = ret->next;
+  ret->in_stack = false, ret->in_reg = false;
+  ret->var = ope, ret->offset = 0, ret->next = NULL;
+  return ret;
+}
+
 void UpdateOpeNextRef(Operand ope, int lineno) {
   if (ope->kind != OP_TEMP || ope->kind != OP_VAR) return;
   for (int i = 8; i < 24; i++) {

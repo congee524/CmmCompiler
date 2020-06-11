@@ -471,6 +471,10 @@ void IRGen(InterCodes root) {
           fprintf(fout, "LABEL %s :\n", OpeName(data->u.label.x));
         } break; /* LABEL x : */
         case I_FUNC: {
+          char *func_name = OpeName(data->u.func.f);
+          if (!strcmp(func_name, "func@main")) {
+            func_name = "main";
+          }
           fprintf(fout, "FUNCTION %s :\n", OpeName(data->u.func.f));
         } break; /* FUNCTION f : */
         case I_ASSIGN: {

@@ -281,9 +281,6 @@ char* OpeName(Operand ope) {
       sprintf(s, "label%d", ope->u.var_no);
     } break;
     case OP_FUNC: {
-      if (!strcmp(ope->u.id, "main")) {
-        return "main";
-      }
       sprintf(s, "func@%s", ope->u.id);
     } break;
     default:
