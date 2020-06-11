@@ -61,9 +61,12 @@ Program:
             /* CP3 */
             ICHead = Translate($$);
             ICHead = OptimIRCode(ICHead);
-            IRGen(ICHead);
             /* CP4 */
-            // Asm();
+            Asm();
+            AsmGen(ACHead);
+            /* debug */
+            fout = fopen("out.ir", "w");
+            IRGen(ICHead);
         }
     }
 ;
