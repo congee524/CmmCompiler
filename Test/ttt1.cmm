@@ -1,3 +1,4 @@
-int mod() {
-    return 3 + 8;
+int add(int a, int b, int c) {
+    a = a + b;
+    return a + c;
 }

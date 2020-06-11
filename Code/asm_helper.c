@@ -50,7 +50,7 @@ AsmCodes MakeACNode(AC_TYPE kind, ...) {
   return ret;
 }
 
-AsmOpe NewLabAsmOpe(char *lab) {
+AsmOpe NewLabAsmOpe(char* lab) {
   AsmOpe ret = (AsmOpe)malloc(sizeof(struct AsmOpe_));
   ret->kind = AO_LABEL;
   ret->u.ident = lab;
@@ -92,7 +92,7 @@ void AddACCode(AsmCodes code) {
 
 void ExpandBlock() {
   BlockSize += 64;
-  BasicBlock = (int *)realloc(BasicBlock, (BlockSize) * sizeof(int));
+  BasicBlock = (int*)realloc(BasicBlock, (BlockSize) * sizeof(int));
 }
 
 void DividBlock(InterCodes IC) {
@@ -227,6 +227,93 @@ void UpdateRegNextRef(InterCodes pre) {
     }
     temp = temp->next;
   }
+}
+
+void PushVarOnStack(Operand ope, int* offset) {
+  if (ope->kind != OP_TEMP || ope->kind != OP_VAR) return;
+  VarDesp var_desp = LookupVarDesp(ope);
+  if (var_desp && var_desp->in_stack) return;
+  var_desp = AddVarDespTab(ope);
+  ShiftStackPointer(-4);
+  *offset = *offset + 4;
+  var_desp->in_stack = true, var_desp->offset = -(*offset);
+}
+
+void PushAllParamOnStack(InterCodes IC, int* offset) {
+  InterCodes param_ic = IC->next;
+  int param_cnt = 0;
+  AsmOpe op_fp = GetRegAsmOpe(_fp);
+  while (param_ic) {
+    if (param_ic->data->kind != I_PARAM) break;
+    Operand param = param_ic->data->u.param.x;
+    PushVarOnStack(param, offset);
+    AsmOpe op_param = GetRegAsmOpe(GetReg(param, IC, false));
+    AsmOpe op_addr = NewAddrAsmOpe(op_fp, 4 * (param_cnt++));
+    AddACCode(MakeACNode(A_LW, op_param, op_addr));
+    param_ic = param_ic->next;
+  }
+}
+
+void PushAllLocalVarOnStack(InterCodes IC, int* offset) {
+  InterCodes var_detector = IC;
+  InterCode data = NULL;
+  while (var_detector->next) {
+    var_detector = var_detector->next;
+    data = var_detector->data;
+    if (data->kind == I_FUNC) break;
+    swtich(data->kind) {
+      case I_LABEL:
+      case I_FUNC:
+      case I_JMP: {
+      } break;
+      case I_DEC: {
+        int dec_size = data->u.dec.size;
+        *offset = *offset + (dec_size - 4);
+        ShiftStackPointer(4 - dec_size);
+        PushVarOnStack(data->u.dec.x, offset);
+      } break; /* DEC x [size] */
+      case I_CALL: {
+        PushVarOnStack(data->u.call.x, offset);
+      } break; /* x := CALL f */
+      case I_RETURN:
+      case I_ARG:
+      case I_PARAM:
+      case I_READ:
+      case I_WRITE: {
+        PushVarOnStack(data->u.unitary.x, offset);
+      } break; /* ret|arg|param|read|write x */
+      case I_ASSIGN:
+      case I_ADDR:
+      case I_DEREF_R:
+      case I_DEREF_L: {
+        PushVarOnStack(data->u.unary.x, offset);
+        PushVarOnStack(data->u.unary.y);
+      } break; /* []x = []y */
+      case I_JMP_IF: {
+        PushVarOnStack(data->u.jmp_if.x, offset);
+        PushVarOnStack(data->u.jmp_if.y, offset);
+      } break; /* IF x [relop] y GOTO z */
+      case I_ADD:
+      case I_SUB:
+      case I_MUL:
+      case I_DIV: {
+        PushVarOnStack(data->u.binop.x, offset);
+        PushVarOnStack(data->u.binop.y, offset);
+        PushVarOnStack(data->u.binop.z, offset);
+      } break; /* x = y op z */
+      default:
+        assert(0);
+    }
+  }
+}
+
+InterCodes GetFuncArgs(InterCodes IC, int* args_cnt) {
+  InterCodes args_ic = IC->prev;
+  while (args_ic && args_ic->data->kind == I_ARG) {
+    *args_cnt = *args_cnt + 1;
+    args_ic = args_ic->prev;
+  }
+  return args_ic;
 }
 
 void ShiftStackPointer(int offset) {

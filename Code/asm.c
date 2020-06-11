@@ -67,7 +67,7 @@ void AsmFromAddr(InterCodes IC) {
   Operand x = data->u.addr.x, y = data->u.addr.y;
   AsmOpe op_des = GetRegAsmOpe(GetReg(x, IC, false));
   VarDesp y_desp = LookupVarDesp(y);
-  AsmOpe op_src = GetRegAsmOpe(Allocate(IC));
+  AsmOpe op_src = GetRegAsmOpe(AllocateImmd(IC));
   AsmOpe op_fp = GetRegAsmOpe(_fp);
   AsmOpe op_off = NewImmdAsmOpe(op_des->offset);
   AddACCode(MakeACNode(A_ADDI, op_src, op_fp, op_off));
@@ -121,114 +121,51 @@ void AsmFromBinaryOpe(InterCodes IC) {
   if (Reg[rz].next_ref == -1) FreeReg(rz);
 }
 
-void PushVarOnStack(Operand ope, int* offset) {
-  if (ope->kind != OP_TEMP || ope->kind != OP_VAR) return;
-  VarDesp var_desp = LookupVarDesp(ope);
-  if (var_desp && var_desp->in_stack) return;
-  var_desp = AddVarDespTab(ope);
-  ShiftStackPointer(4);
-  *offset = *offset + 4;
-  var_desp->in_stack = true, var_desp->offset = -(*offset);
-}
-
-void PushAllLocalVarOnStack(InterCodes IC, int* offset) {
-  InterCodes var_detector = IC;
-  InterCode data = NULL;
-  while (var_detector->next) {
-    var_detector = var_detector->next;
-    data = var_detector->data;
-    if (data->kind == I_FUNC) break;
-    swtich(data->kind) {
-      case I_LABEL:
-      case I_FUNC:
-      case I_JMP: {
-      } break;
-      case I_DEC: {
-        PushVarOnStack(data->u.dec.x, offset);
-      } break; /* DEC x [size] */
-      case I_CALL: {
-        PushVarOnStack(data->u.call.x, offset);
-      } break; /* x := CALL f */
-      case I_RETURN:
-      case I_ARG:
-      case I_PARAM:
-      case I_READ:
-      case I_WRITE: {
-        PushVarOnStack(data->u.unitary.x, offset);
-      } break; /* ret|arg|param|read|write x */
-      case I_ASSIGN:
-      case I_ADDR:
-      case I_DEREF_R:
-      case I_DEREF_L: {
-        PushVarOnStack(data->u.unary.x, offset);
-        PushVarOnStack(data->u.unary.y);
-      } break; /* []x = []y */
-      case I_JMP_IF: {
-        PushVarOnStack(data->u.jmp_if.x, offset);
-        PushVarOnStack(data->u.jmp_if.y, offset);
-      } break; /* IF x [relop] y GOTO z */
-      case I_ADD:
-      case I_SUB:
-      case I_MUL:
-      case I_DIV: {
-        PushVarOnStack(data->u.binop.x, offset);
-        PushVarOnStack(data->u.binop.y, offset);
-        PushVarOnStack(data->u.binop.z, offset);
-      } break; /* x = y op z */
-      default:
-        assert(0);
-    }
-  }
-}
-
 void AsmFromFunc(InterCodes IC) {
-  InterCode data = IC->data;
-
   /* func_name: */
-  AsmOpe op_func = NewLabAsmOpe(OpeName(data->u.func.f));
+  AsmOpe op_func = NewLabAsmOpe(OpeName(IC->data->u.func.f));
   AddACCode(MakeACNode(A_LABEL, op_func));
 
-  /* Update sp fp */
+  /* update fp */
   AsmOpe op_sp = GetRegAsmOpe(_sp), op_fp = GetRegAsmOpe(_fp);
   AddACCode(MakeACNode(A_MOVE, op_fp, op_sp));
 
-  /* push param and local var in the function onto stack */
+  /* push param and local var of the function onto stack */
   int offset = 0;
-  TODO()  // push param onto stack and reg
+  PushAllParamOnStack(IC, &offset);
   PushAllLocalVarOnStack(IC, &offset);
 }
 
 void AsmFromArg(InterCodes IC) {
   /* void */
-  /* Handle Args In Func Call */
+  /* Handle Args In I_Call */
 }
 
-InterCodes GetFuncArgs(InterCodes IC, int* args_cnt) {
-  InterCodes args_ic = IC->prev;
-  while (args_ic && args_ic->data->kind == I_ARG) {
-    *args_cnt = *args_cnt + 1;
-    args_ic = args_ic->prev;
-  }
-  return args_ic;
+void AsmFromParam(InterCodes IC) {
+  /* void */
+  /* Handle Params In I_FUNC */
 }
+
+void AsmFromDec(InterCodes IC) {
+  /* void */
+  /* Handle Dec In PushAllLocalVarOnStack */
+}
+
+void AsmFromJmp(InterCodes IC) { TODO() }
+
+void AsmFromJmpIf(InterCodes IC) { TODO() }
+
+void AsmFromReturn(InterCodes IC) { TODO() }
+
+void AsmFromRead(InterCodes IC) { TODO() }
+
+void AsmFromWrite(InterCodes IC) { TODO() }
 
 void AsmFromCall(InterCodes IC) {
   InterCode data = IC->data;
 
   /* push all variable onto stack */
   SpillAll();
-
-  /* push args onto stack */
-  int args_cnt = 0;
-  InterCodes args_ic = GetFuncArgs(IC, &args_cnt);
-  ShiftStackPointer(-4 * args_cnt);
-  for (int i = 0; i < args_cnt; i++) {
-    args_ic = args_ic->next;
-    Operand _arg = args_ic->data.u.arg.x;
-    AsmOpe op_arg = GetRegAsmOpe(GetReg(_arg, IC, true));
-    AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 4 * i);
-    AddACCode(MakeACNode(A_SW, op_arg, op_addr));
-  }
 
   /* push return address onto stack */
   ShiftStackPointer(-4);
@@ -242,13 +179,30 @@ void AsmFromCall(InterCodes IC) {
   AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 0);
   AddACCode(MakeACNode(A_SW, op_fp, op_addr));
 
+  /* push args onto stack */
+  int args_cnt = 0;
+  InterCodes args_ic = GetFuncArgs(IC, &args_cnt);
+  ShiftStackPointer(-4 * args_cnt);
+  for (int i = 0; i < args_cnt; i++) {
+    args_ic = args_ic->next;
+    Operand _arg = args_ic->data.u.arg.x;
+    AsmOpe op_arg = GetRegAsmOpe(GetReg(_arg, IC, true));
+    AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 4 * i);
+    AddACCode(MakeACNode(A_SW, op_arg, op_addr));
+  }
+
   /* jal func */
   AsmOpe op_f = NewLabAsmOpe(OpeName(data->u.call.f));
   AddACCode(MakeACNode(A_JAL, op_f));
 
-  /* recover fp and sp */
+  /* recover sp */
   AsmOpe op_fp = GetRegAsmOpe(_fp), op_sp = GetRegAsmOpe(_sp);
   AddACCode(MakeACNode(A_MOVE, op_sp, op_fp));
+
+  /* shrink stack for discarding args */
+  ShiftStackPointer(4 * args_cnt);
+
+  /* recover fp */
   AsmOpe op_addr = NewAddrAsmOpe(op_sp, 0);
   AddACCode(MakeACNode(A_lw, op_fp, op_addr));
   ShiftStackPointer(4);
@@ -259,12 +213,9 @@ void AsmFromCall(InterCodes IC) {
   AddACCode(MakeACNode(A_LW, op_ra, op_addr));
   ShiftStackPointer(4);
 
-  /* shrink stack for discarding args */
-  ShiftStackPointer(4 * args_cnt);
-
   /* store the return value */
   AsmOpe op_v0 = GetRegAsmOpe(_v0);
-  AsmOpe op_x = GetRegAsmOpe(GetReg(data->u.call.x, pre, false));
+  AsmOpe op_x = GetRegAsmOpe(GetReg(data->u.call.x, IC, false));
   AddACCode(MakeACNode(A_Move, op_x, op_v0));
 }
 
@@ -299,16 +250,16 @@ void TranslateAsm(InterCodes IC) {
         AsmFromDerefL(temp);
       } break; /* *x := y */
       case I_JMP: {
-        TODO()
+        AsmFromJmp(temp);
       } break; /* GOTO x */
       case I_JMP_IF: {
-        TODO()
+        AsmFromJmpIf(temp);
       } break; /* IF x [relop] y GOTO z */
       case I_RETURN: {
-        TODO()
+        AsmFromReture(temp);
       } break; /* RETURN x */
       case I_DEC: {
-        TODO()
+        AsmFromDec(temp);
       } break; /* DEC x [size] */
       case I_ARG: {
         AsmFromArg(temp);
@@ -317,13 +268,13 @@ void TranslateAsm(InterCodes IC) {
         AsmFromCall(temp);
       } break; /* x := CALL f */
       case I_PARAM: {
-        TODO()
+        AsmFromParam(temp);
       } break; /* PARAM x */
       case I_READ: {
-        TODO()
+        AsmFromRead();
       } break; /* READ x */
       case I_WRITE: {
-        TODO()
+        AsmFromWrite();
       } break; /* WRITE x */
       default:
         assert(0);
