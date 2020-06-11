@@ -41,10 +41,8 @@ void AsmInit() {
 }
 
 void AsmFromLabel(InterCodes IC) {
-  InterCode data = IC->data;
-  AsmOpe lab = NewLabAsmOpe(OpeName(data->u.label.x));
-  AsmCodes label_code = MakeACNode(A_LABEL, lab);
-  AddACCode(label_code);
+  AsmOpe lab = NewLabAsmOpe(OpeName(IC->data->u.label.x));
+  AddACCode(MakeACNode(A_LABEL, lab));
 }
 
 void AsmFromAssign(InterCodes IC) {
@@ -151,15 +149,96 @@ void AsmFromDec(InterCodes IC) {
   /* Handle Dec In PushAllLocalVarOnStack */
 }
 
-void AsmFromJmp(InterCodes IC) { TODO() }
+void AsmFromJmp(InterCodes IC) {
+  /* Goto x */
+  AsmOpe op_lab = NewLabAsmOpe(OpeName(IC->data->u.jmp.x));
+  AddACCode(A_J, op_lab);
+}
 
-void AsmFromJmpIf(InterCodes IC) { TODO() }
+void AsmFromJmpIf(InterCodes IC) {
+  /* IF x [relop] y GOTO z */
+  InterCode data = IC->data;
+  AsmOpe op_x = GetRegAsmOpe(GetReg(data->u.jmp_if.x, IC, true));
+  AsmOpe op_y = GetRegAsmOpe(GetReg(data->u.jmp_if.y, IC, true));
+  AsmOpe op_lab = NewLabAsmOpe(OpeName(IC->data->u.jmp_if.z));
+  switch (data->u.jmp_if.relop) {
+    case EQ: {
+      AddACCode(MakeACNode(A_BEQ, op_x, op_y, op_lab));
+    } break; /* == */
+    case NEQ: {
+      AddACCode(MakeACNode(A_BNE, op_x, op_y, op_lab));
+    } break; /* != */
+    case GT: {
+      AddACCode(MakeACNode(A_BGT, op_x, op_y, op_lab));
+    } break; /* > */
+    case LT: {
+      AddACCode(MakeACNode(A_BLT, op_x, op_y, op_lab));
+    } break; /* < */
+    case GEQ: {
+      AddACCode(MakeACNode(A_BGE, op_x, op_y, op_lab));
+    } break; /* >= */
+    case LEQ: {
+      AddACCode(MakeACNode(A_BLE, op_x, op_y, op_lab));
+    } break; /* <= */
+  }
+}
 
-void AsmFromReturn(InterCodes IC) { TODO() }
+void AsmFromReturn(InterCodes IC) {
+  /* move the return value to $v0 */
+  InterCode data = IC->data;
+  AsmOpe op_ret = GetRegAsmOpe(GetReg(data->u.ret.x, IC, true));
+  AsmOpe op_v0 = GetRegAsmOpe(_v0);
+  AddACCode(MakeACNode(A_MOVE, op_v0, op_ret));
+  SpillAll();
+  AsmOpe op_ra = GetRegAsmOpe(_ra);
+  AddACCode(MakeACNode(A_JR, op_ra));
+}
 
-void AsmFromRead(InterCodes IC) { TODO() }
+void AsmFromRead(InterCodes IC) {
+  /* push return address onto stack */
+  ShiftStackPointer(-4);
+  AsmOpe op_ra = GetRegAsmOpe(_ra);
+  AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 0);
+  AddACCode(MakeACNode(A_SW, op_ra, op_addr));
 
-void AsmFromWrite(InterCodes IC) { TODO() }
+  /* jal read */
+  AddACCode(MakeACNode(A_JAL, NewLabAsmOpe("read")));
+
+  /* recover return address from stack */
+  AsmOpe op_ra = GetRegAsmOpe(_ra);
+  AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 0);
+  AddACCode(MakeACNode(A_LW, op_ra, op_addr));
+  ShiftStackPointer(4);
+
+  /* store the return value */
+  Operand read_x = IC->data->u.read.x;
+  AsmOpe op_v0 = GetRegAsmOpe(_v0);
+  AsmOpe op_read_x = GetRegAsmOpe(GetReg(read_x, IC, false));
+  AddACCode(MakeACNode(A_Move, op_read_x, op_v0));
+}
+
+void AsmFromWrite(InterCodes IC) {
+  /* move the param of write to $a0 */
+  AsmOpe op_a0 = GetRegAsmOpe(_a0);
+  Operand write_x = IC->data->u.write.x;
+  AsmOpe op_write_x = GetRegAsmOpe(GetReg(write_x, IC, true));
+  AddACCode(MakeACNode(A_MOVE, op_a0, op_write_x));
+
+  /* push return address onto stack */
+  ShiftStackPointer(-4);
+  AsmOpe op_ra = GetRegAsmOpe(_ra);
+  AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 0);
+  AddACCode(MakeACNode(A_SW, op_ra, op_addr));
+
+  /* jal write */
+  AddACCode(MakeACNode(A_JAL, NewLabAsmOpe("write")));
+
+  /* recover return address from stack */
+  AsmOpe op_ra = GetRegAsmOpe(_ra);
+  AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 0);
+  AddACCode(MakeACNode(A_LW, op_ra, op_addr));
+  ShiftStackPointer(4);
+}
 
 void AsmFromCall(InterCodes IC) {
   InterCode data = IC->data;

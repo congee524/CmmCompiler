@@ -200,9 +200,9 @@ RELOP_TYPE GetRelop(Node* relop) {
   assert(strcmp(relop->symbol, "RELOP") == 0);
   switch (relop->ival) {
     case 0: /* > */
-      return GE;
+      return GT;
     case 1: /* < */
-      return LE;
+      return LT;
     case 2: /* >= */
       return GEQ;
     case 3: /* <= */
@@ -295,9 +295,9 @@ char* RelopName(RELOP_TYPE relop) {
       return ">=";
     case LEQ:
       return "<=";
-    case GE:
+    case GT:
       return ">";
-    case LE:
+    case LT:
       return "<";
     case EQ:
       return "==";

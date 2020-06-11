@@ -342,8 +342,7 @@ void Spill(int reg_no) {
   assert(ope_desp->in_stack);
   AsmOpe op_src = GetRegAsmOpe(reg_no);
   AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_fp), ope_desp->offset);
-  AsmCodes sw_code = MakeACNode(A_SW, op_src, op_addr);
-  AddACCode(sw_code);
+  AddACCode(MakeACNode(A_SW, op_src, op_addr));
   Reg[reg_no].var = NULL, Reg[reg_no].next_ref = -1;
   ope_desp->in_reg = false, ope_desp->reg_no = -1;
 }

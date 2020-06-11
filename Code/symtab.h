@@ -154,8 +154,8 @@ struct ArgList_ {
 typedef enum RELOP_TYPE {
   GEQ = 0, /* >= */
   LEQ,     /* <= */
-  GE,      /* > */
-  LE,      /* < */
+  GT,      /* > */
+  LT,      /* < */
   EQ,      /* == */
   NEQ      /* != */
 } RELOP_TYPE;
@@ -282,6 +282,7 @@ struct RegDesp_ {
 extern RegDesp Reg[32];
 extern AsmOpe RegOpe[32];
 #define _v0 2
+#define _a0 4
 #define _immd1 24
 #define _immd2 25
 #define _sp 29
