@@ -215,6 +215,13 @@ void UpdateRegNextRef(InterCodes pre) {
   }
 }
 
+void ShiftStackPointer(int offset) {
+  if (offset == 0) return;
+  AsmOpe op_sp = GetRegAsmOpe(_sp);
+  AsmOpe op_off = NewImmdAsmOpe(offset);
+  AddACCode(MakeACNode(A_ADDI, op_sp, op_sp, op_off));
+}
+
 int GetInactiveReg(InterCodes pre) {
   UpdateRegNextRef(pre);
   int ret = 8, temp_ref = Reg[8].next_ref;

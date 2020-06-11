@@ -281,12 +281,12 @@ struct RegDesp_ {
 
 extern RegDesp Reg[32];
 extern AsmOpe RegOpe[32];
-#define Reg_v0 Reg[2]
-#define Reg_gp Reg[28]
-#define Reg_sp Reg[29]
-#define Reg_fp Reg[30]
-#define Reg_ra Reg[31]
+#define _v0 2
+#define _immd1 24
+#define _immd2 25
+#define _sp 29
 #define _fp 30
+#define _ra 31
 
 struct VarDesp_ {
   Operand var;

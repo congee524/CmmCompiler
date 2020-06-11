@@ -129,7 +129,62 @@ void AsmFromFunc(InterCodes IC) {
   PushLocalVarOnStack(IC);
 }
 
-void AsmFromCall(InterCodes IC) { SpillAll(); }
+void AsmFromArg(InterCodes IC) {
+  /* void */
+  /* Handle Args In Func Call */
+}
+
+InterCodes GetFuncArgs(InterCodes IC, int* args_cnt) {
+  InterCodes args_ic = IC->prev;
+  while (args_ic && args_ic->data->kind == I_ARG) {
+    *args_cnt = *args_cnt + 1;
+    args_ic = args_ic->prev;
+  }
+  return args_ic;
+}
+
+void AsmFromCall(InterCodes IC) {
+  InterCode data = IC->data;
+
+  /* push all variable onto stack */
+  SpillAll();
+
+  /* push args onto stack */
+  int args_cnt = 0;
+  InterCodes args_ic = GetFuncArgs(IC, &args_cnt);
+  ShiftStackPointer(-4 * args_cnt);
+  for (int i = 0; i < args_cnt; i++) {
+    args_ic = args_ic->next;
+    Operand _arg = args_ic->data.u.arg.x;
+    AsmOpe op_arg = GetRegAsmOpe(GetReg(_arg, IC, true));
+    AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 4 * i);
+    AddACCode(MakeACNode(A_SW, op_arg, op_addr));
+  }
+
+  /* push return address onto stack */
+  ShiftStackPointer(-4);
+  AsmOpe op_ra = GetRegAsmOpe(_ra);
+  AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 0);
+  AddACCode(MakeACNode(A_SW, op_ra, op_addr));
+
+  /* jal func */
+  AsmOpe op_lab = NewLabAsmOpe(OpeName(data->u.call.f));
+  AddACCode(MakeACNode(A_JAL, op_lab));
+
+  /* recover return address from stack */
+  AsmOpe op_ra = GetRegAsmOpe(_ra);
+  AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_sp), 0);
+  AddACCode(MakeACNode(A_LW, op_ra, op_addr));
+  ShiftStackPointer(4);
+
+  /* reduce stack for discarding args */
+  ShiftStackPointer(4 * args_cnt);
+
+  /* store the return value */
+  AsmOpe op_v0 = GetRegAsmOpe(_v0);
+  AsmOpe op_x = GetRegAsmOpe(GetReg(data->u.call.x, pre, false));
+  AddACCode(MakeACNode(A_Move, op_x, op_v0));
+}
 
 void TranslateAsm(InterCodes IC) {
   InterCodes temp = IC;
@@ -174,7 +229,7 @@ void TranslateAsm(InterCodes IC) {
         TODO()
       } break; /* DEC x [size] */
       case I_ARG: {
-        TODO()
+        AsmFromArg(temp);
       } break; /* ARG x */
       case I_CALL: {
         AsmFromCall(temp);
