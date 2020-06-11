@@ -7,39 +7,6 @@ RegDesp Reg[32];
 AsmOpe RegOpe[32];
 VarDesp vardesptable[0x3fff];
 
-void Asm() {
-  AsmInit();
-  TranslateAsm(ICHead);
-}
-
-void AsmInit() {
-  ACHead = (AsmCodes)malloc(sizeof(struct AsmCodes_));
-  ACHead->data = NULL;
-  ACHead->prev = ACHead->next = NULL;
-
-  BlockSize = 64, BlockCnt = 0;
-  BasicBlock = (int*)malloc(BlockSize * sizeof(int));
-
-  for (int i = 0; i < 32; i++) {
-    Reg[i].var = NULL;
-    Reg[i].next_ref = -1;
-    RegOpe[i] = (AsmOpe)malloc(sizeof(struct AsmOpe_));
-    RegOpe[i]->kind = AO_REG;
-    RegOpe[i]->u.no = i;
-  }
-
-  for (int i = 0; i < 0x3fff; i++) {
-    vardesptable[i] = (VarDesp)malloc(sizeof(struct VarDesp_));
-    vardesptable[i]->next = NULL;
-  }
-
-  // Reg 24, 25 served as immediate register
-  for (int i = 24; i < 26; i++) {
-    Reg[i].var = NewTemp();
-    Reg[i].next_ref = -1;
-  }
-}
-
 void AsmFromLabel(InterCodes IC) {
   AsmOpe lab = NewLabAsmOpe(OpeName(IC->data->u.label.x));
   AddACCode(MakeACNode(A_LABEL, lab));
@@ -72,7 +39,7 @@ void AsmFromAddr(InterCodes IC) {
   AddACCode(MakeACNode(A_Move, op_des, op_src));
 }
 
-AsmFromDerefR(InterCodes IC) {
+void AsmFromDerefR(InterCodes IC) {
   /* x = *y */
   InterCode data = IC->data;
   Operand x = data->u.deref_r.x, y = data->u.deref_r.y;
@@ -81,7 +48,7 @@ AsmFromDerefR(InterCodes IC) {
   AddACCode(MakeACNode(A_LW, op_des, op_addr));
 }
 
-AsmFromDerefL(InterCodes IC) {
+void AsmFromDerefL(InterCodes IC) {
   /* *x = y */
   InterCode data = IC->data;
   Operand x = data->u.deref_l.x, y = data->u.deref_l.y;
@@ -298,6 +265,62 @@ void AsmFromCall(InterCodes IC) {
   AddACCode(MakeACNode(A_Move, op_x, op_v0));
 }
 
+void AsmHeadGen() {
+  fprintf(fout, ".data\n");
+  fprintf(fout, "_prompt: .asciiz \"Enter an Integer:\"\n");
+  fprintf(fout, "_ret: .asciiz \"\\n\"\n");
+  fprintf(fout, ".globl func@main\n");
+  fprintf(fout, ".text\n");
+  fprintf(fout, "read:\n");
+  fprintf(fout, "  li $v0, 4\n");
+  fprintf(fout, "  la $a0, _prompt\n");
+  fprintf(fout, "  syscall\n");
+  fprintf(fout, "  li $v0, 5\n");
+  fprintf(fout, "  syscall\n");
+  fprintf(fout, "  jr $ra\n\n");
+  fprintf(fout, "write:\n");
+  fprintf(fout, "  li $v0, 1\n");
+  fprintf(fout, "  syscall\n");
+  fprintf(fout, "  li $v0, 4\n");
+  fprintf(fout, "  la $a0, _ret\n");
+  fprintf(fout, "  syscall\n");
+  fprintf(fout, "  move $v0, $0\n");
+  fprintf(fout, "  jr $ra\n");
+}
+
+void Asm() {
+  AsmInit();
+  TranslateAsm(ICHead);
+}
+
+void AsmInit() {
+  ACHead = (AsmCodes)malloc(sizeof(struct AsmCodes_));
+  ACHead->data = NULL;
+  ACHead->prev = ACHead->next = NULL;
+
+  BlockSize = 64, BlockCnt = 0;
+  BasicBlock = (int*)malloc(BlockSize * sizeof(int));
+
+  for (int i = 0; i < 32; i++) {
+    Reg[i].var = NULL;
+    Reg[i].next_ref = -1;
+    RegOpe[i] = (AsmOpe)malloc(sizeof(struct AsmOpe_));
+    RegOpe[i]->kind = AO_REG;
+    RegOpe[i]->u.no = i;
+  }
+
+  for (int i = 0; i < 0x3fff; i++) {
+    vardesptable[i] = (VarDesp)malloc(sizeof(struct VarDesp_));
+    vardesptable[i]->next = NULL;
+  }
+
+  // Reg 24, 25 served as immediate register
+  for (int i = 24; i < 26; i++) {
+    Reg[i].var = NewTemp();
+    Reg[i].next_ref = -1;
+  }
+}
+
 void TranslateAsm(InterCodes IC) {
   InterCodes temp = IC;
   InterCode data = NULL;
@@ -363,12 +386,122 @@ void TranslateAsm(InterCodes IC) {
 }
 
 void AsmGen(AsmCodes root) {
-  AsmCodes temp = root;
+  AsmHeadGen();
+  AsmCodes temp = root->next;
   AsmCode data = NULL;
+  char *op1_name, *op2_name, *op3_name;
   while (temp) {
     data = temp->data;
     switch (data->kind) {
-      // TODO()
+      case A_LABEL: {
+        op1_name = AsmOpeName(data->u.unary.op1);
+        if (!strncmp(op1_name, "func@", 5)) {
+          fprintf(fout, "\n%s:\n", op1_name);
+        } else {
+          fprintf(fout, "%s:\n", op1_name);
+        }
+      } break; /* lab: */
+      case A_J: {
+        op1_name = AsmOpeName(data->u.unary.op1);
+        fprintf(fout, "  j %s\n", op1_name);
+      } break; /* j lab */
+      case A_JAL: {
+        op1_name = AsmOpeName(data->u.unary.op1);
+        fprintf(fout, "  jal %s\n", op1_name);
+      } break; /* jal lab */
+      case A_JR: {
+        op1_name = AsmOpeName(data->u.unary.op1);
+        fprintf(fout, "  jr %s\n", op1_name);
+      } break; /* jr src1 */
+      case A_MFLO: {
+        op1_name = AsmOpeName(data->u.unary.op1);
+        fprintf(fout, "  mflo %s\n", op1_name);
+      } break; /* mflo des */
+      case A_DIV: {
+        op1_name = AsmOpeName(data->u.binary.op1);
+        op2_name = AsmOpeName(data->u.binary.op2);
+        fprintf(fout, "  div %s, %s\n", op1_name, op2_name);
+      } break; /* div src1, reg2 */
+      case A_LI: {
+        op1_name = AsmOpeName(data->u.binary.op1);
+        op2_name = AsmOpeName(data->u.binary.op2);
+        fprintf(fout, "  li %s, %s\n", op1_name, op2_name);
+      } break; /* li des, immd */
+      case A_MOVE: {
+        op1_name = AsmOpeName(data->u.binary.op1);
+        op2_name = AsmOpeName(data->u.binary.op2);
+        fprintf(fout, "  move %s, %s\n", op1_name, op2_name);
+      } break; /* move des, src1 */
+      case A_LW: {
+        op1_name = AsmOpeName(data->u.binary.op1);
+        op2_name = AsmOpeName(data->u.binary.op2);
+        fprintf(fout, "  lw %s, %s\n", op1_name, op2_name);
+      } break; /* lw des, addr */
+      case A_SW: {
+        op1_name = AsmOpeName(data->u.binary.op1);
+        op2_name = AsmOpeName(data->u.binary.op2);
+        fprintf(fout, "  sw %s, %s\n", op1_name, op2_name);
+      } break; /* sw src1, addr */
+      case A_ADDI: {
+        op1_name = AsmOpeName(data->u.ternary.op1);
+        op2_name = AsmOpeName(data->u.ternary.op2);
+        op3_name = AsmOpeName(data->u.ternary.op3);
+        fprintf(fout, "  addi %s, %s, %s\n", op1_name, op2_name, op3_name);
+      } break; /* addi des, src1, immd */
+      case A_ADD: {
+        op1_name = AsmOpeName(data->u.ternary.op1);
+        op2_name = AsmOpeName(data->u.ternary.op2);
+        op3_name = AsmOpeName(data->u.ternary.op3);
+        fprintf(fout, "  add %s, %s, %s\n", op1_name, op2_name, op3_name);
+      } break; /* add des, src1, src2 */
+      case A_SUB: {
+        op1_name = AsmOpeName(data->u.ternary.op1);
+        op2_name = AsmOpeName(data->u.ternary.op2);
+        op3_name = AsmOpeName(data->u.ternary.op3);
+        fprintf(fout, "  sub %s, %s, %s\n", op1_name, op2_name, op3_name);
+      } break; /* sub des, src1, src2 */
+      case A_MUL: {
+        op1_name = AsmOpeName(data->u.ternary.op1);
+        op2_name = AsmOpeName(data->u.ternary.op2);
+        op3_name = AsmOpeName(data->u.ternary.op3);
+        fprintf(fout, "  mul %s, %s, %s\n", op1_name, op2_name, op3_name);
+      } break; /* mul des, src1, src2 */
+      case A_BEQ: {
+        op1_name = AsmOpeName(data->u.ternary.op1);
+        op2_name = AsmOpeName(data->u.ternary.op2);
+        op3_name = AsmOpeName(data->u.ternary.op3);
+        fprintf(fout, "  beq %s, %s, %s\n", op1_name, op2_name, op3_name);
+      } break; /* beq src1, src2, lab */
+      case A_BNE: {
+        op1_name = AsmOpeName(data->u.ternary.op1);
+        op2_name = AsmOpeName(data->u.ternary.op2);
+        op3_name = AsmOpeName(data->u.ternary.op3);
+        fprintf(fout, "  bne %s, %s, %s\n", op1_name, op2_name, op3_name);
+      } break; /* bne src1, src2, lab */
+      case A_BGT: {
+        op1_name = AsmOpeName(data->u.ternary.op1);
+        op2_name = AsmOpeName(data->u.ternary.op2);
+        op3_name = AsmOpeName(data->u.ternary.op3);
+        fprintf(fout, "  bgt %s, %s, %s\n", op1_name, op2_name, op3_name);
+      } break; /* bgt src1, src2, lab */
+      case A_BLT: {
+        op1_name = AsmOpeName(data->u.ternary.op1);
+        op2_name = AsmOpeName(data->u.ternary.op2);
+        op3_name = AsmOpeName(data->u.ternary.op3);
+        fprintf(fout, "  blt %s, %s, %s\n", op1_name, op2_name, op3_name);
+      } break; /* blt src1, src2, lab */
+      case A_BGE: {
+        op1_name = AsmOpeName(data->u.ternary.op1);
+        op2_name = AsmOpeName(data->u.ternary.op2);
+        op3_name = AsmOpeName(data->u.ternary.op3);
+        fprintf(fout, "  bge %s, %s, %s\n", op1_name, op2_name, op3_name);
+      } break; /* bge src1, src2, lab */
+      case A_BLE: {
+        op1_name = AsmOpeName(data->u.ternary.op1);
+        op2_name = AsmOpeName(data->u.ternary.op2);
+        op3_name = AsmOpeName(data->u.ternary.op3);
+        fprintf(fout, "  ble %s, %s, %s\n", op1_name, op2_name, op3_name);
+      } break; /* ble src1, src2, lab */
       default:
         assert(0);
     }

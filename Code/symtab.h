@@ -313,11 +313,56 @@ AsmCodes MakeACNode(AC_TYPE kind, ...);
 
 AsmOpe NewLabAsmOpe(char *lab);
 
-void AddACCode();
+AsmOpe GetRegAsmOpe(int reg_no);
+
+AsmOpe NewAddrAsmOpe(AsmOpe addr, int off);
+
+AsmOpe NewImmdAsmOpe(int ival);
+
+void AddACCode(AsmCodes code);
+
+char *AsmOpeName(AsmOpe ope);
 
 void ExpandBlock();
 
 void DividBlock(InterCodes IC);
+
+bool IsSameOpe(Operand x, Operand y);
+
+VarDesp LookupVarDesp(Operand ope);
+
+VarDesp AddVarDespTab(Operand ope);
+
+void UpdateOpeNextRef(Operand ope, int lineno);
+
+void UpdateRegNextRef(InterCodes pre);
+
+void PushVarOnStack(Operand ope, int *offset);
+
+void PushAllParamOnStack(InterCodes IC, int *offset);
+
+void PushAllLocalVarOnStack(InterCodes IC, int *offset);
+
+InterCodes GetFuncArgs(InterCodes IC, int *args_cnt);
+
+void ShiftStackPointer(int offset);
+
+int GetInactiveReg(InterCodes pre);
+
+void Spill(int reg_no);
+
+void SpillAll();
+
+int Allocate(InterCodes pre);
+
+int Ensure(Operand ope, InterCodes pre, bool isload);
+
+int AllocateImmd(InterCodes pre);
+
+int GetReg(Operand ope, InterCodes pre, bool isload);
+
+void FreeReg(int reg_no);
+
 /*============= asm =============*/
 
 void Asm();
@@ -328,7 +373,39 @@ void TranslateAsm(InterCodes IC);
 
 void AsmGen(AsmCodes root);
 
+void AsmHeadGen();
+
 void AsmFromLabel(InterCode data);
+
+void AsmFromAssign(InterCodes IC);
+
+void AsmFromAddr(InterCodes IC);
+
+void AsmFromDerefR(InterCodes IC);
+
+void AsmFromDerefL(InterCodes IC);
+
+void AsmFromBinaryOpe(InterCodes IC);
+
+void AsmFromFunc(InterCodes IC);
+
+void AsmFromArg(InterCodes IC);
+
+void AsmFromParam(InterCodes IC);
+
+void AsmFromDec(InterCodes IC);
+
+void AsmFromJmp(InterCodes IC);
+
+void AsmFromJmpIf(InterCodes IC);
+
+void AsmFromReturn(InterCodes IC);
+
+void AsmFromRead(InterCodes IC);
+
+void AsmFromWrite(InterCodes IC);
+
+void AsmFromCall(InterCodes IC);
 
 /*============= semantic =============*/
 

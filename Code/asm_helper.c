@@ -90,6 +90,52 @@ void AddACCode(AsmCodes code) {
   }
 }
 
+char* AsmOpeName(AsmOpe ope) {
+  switch (ope->kind) {
+    case AO_REG: {
+      char ret[4];
+      int reg_no = ope->u.no;
+      { /* get register alias */
+        if (reg_no == 2) {
+          return "$v0";
+        } else if (reg_no == 4) {
+          return "$a0";
+        } else if (reg_no >= 8 && reg_no <= 15) {
+          sprintf(ret, "$t%d", reg_no - 8);
+          return strdup(ret);
+        } else if (reg_no >= 16 && reg_no <= 23) {
+          sprintf(ret, "$s%d", reg_no - 16);
+          return strdup(ret);
+        } else if (reg_no >= 24 && reg_no <= 25) {
+          sprintf(ret, "$t%d", reg_no - 16);
+          return strdup(ret);
+        } else if (reg_no == 29) {
+          return "$sp";
+        } else if (reg_no == 30) {
+          return "$fp";
+        } else if (reg_no == 31) {
+          return "$ra";
+        } else {
+          assert(0);
+        }
+      }
+    } break;
+    case AO_ADDR: {
+      char ret[16];
+      sprintf(ret, "%d(%s)", ope->u.off, AsmOpeName(ope->u.addr));
+      return strdup(ret);
+    } break;
+    case AO_IMMD: {
+      char ret[16];
+      sprintf(ret, "%d", ope->u.ival;
+      return strdup(ret);
+    } break;
+    case AO_LABEL: {
+      return ope->u.ident;
+    } break;
+  }
+}
+
 void ExpandBlock() {
   BlockSize += 64;
   BasicBlock = (int*)realloc(BasicBlock, (BlockSize) * sizeof(int));
@@ -407,8 +453,7 @@ int GetReg(Operand ope, InterCodes pre, bool isload) {
     ret = AllocateImmd(pre);
     AsmOpe op_des = GetRegAsmOpe(ret);
     AsmOpe op_immd = NewImmdAsmOpe(ope->u.ival);
-    AsmCodes li_code = MakeACNode(A_LI, op_des, op_immd);
-    AddACCode(li_code);
+    AddACCode(MakeACNode(A_LI, op_des, op_immd));
   }
   return ret;
 }
