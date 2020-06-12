@@ -127,7 +127,7 @@ char* AsmOpeName(AsmOpe ope) {
     } break;
     case AO_IMMD: {
       char ret[16];
-      sprintf(ret, "%d", ope->u.ival;
+      sprintf(ret, "%d", ope->u.ival);
       return strdup(ret);
     } break;
     case AO_LABEL: {
@@ -145,16 +145,18 @@ void DividBlock(InterCodes IC) {
   InterCodes temp = IC;
   InterCode data = NULL;
   int lineno = 0;
-  BasicBlock[BlockCnt++] = lineno;
+  // BasicBlock[BlockCnt++] = lineno;
   while (temp) {
     data = temp->data;
     temp->lineno = lineno++;
     switch (data->kind) {
       case I_LABEL:
-      case I_CALL: {
+      case I_FUNC: {
+        if (BasicBlock[BlockCnt] == temp->lineno) break;
         if (BlockCnt >= BlockSize) ExpandBlock();
         BasicBlock[BlockCnt++] = temp->lineno;
       } break;
+      case I_CALL:
       case I_JMP:
       case I_JMP_IF: {
         if (BlockCnt >= BlockSize) ExpandBlock();
@@ -187,7 +189,7 @@ VarDesp LookupVarDesp(Operand ope) {
   VarDesp ret = vardesptable[hash_ope(ope)];
   while (ret->next) {
     ret = ret->next;
-    if (IsSameOpe(ope, temp->var)) return ret;
+    if (IsSameOpe(ope, ret->var)) return ret;
   }
   return NULL;
 }
@@ -197,7 +199,7 @@ VarDesp AddVarDespTab(Operand ope) {
   VarDesp ret = vardesptable[hash_ope(ope)];
   while (ret->next) {
     ret = ret->next;
-    if (IsSameOpe(ope, temp->var)) assert(0);
+    if (IsSameOpe(ope, ret->var)) assert(0);
   }
   ret->next = (VarDesp)malloc(sizeof(struct VarDesp_));
   ret = ret->next;
@@ -207,7 +209,7 @@ VarDesp AddVarDespTab(Operand ope) {
 }
 
 void UpdateOpeNextRef(Operand ope, int lineno) {
-  if (ope->kind != OP_TEMP || ope->kind != OP_VAR) return;
+  if (ope->kind != OP_TEMP && ope->kind != OP_VAR) return;
   for (int i = 8; i < 24; i++) {
     if (Reg[i].next_ref == -1 && IsSameOpe(ope, Reg[i].var)) {
       Reg[i].next_ref = lineno;
@@ -276,11 +278,11 @@ void UpdateRegNextRef(InterCodes pre) {
 }
 
 void PushVarOnStack(Operand ope, int* offset) {
-  if (ope->kind != OP_TEMP || ope->kind != OP_VAR) return;
+  if (ope->kind != OP_TEMP && ope->kind != OP_VAR) return;
   VarDesp var_desp = LookupVarDesp(ope);
   if (var_desp && var_desp->in_stack) return;
   var_desp = AddVarDespTab(ope);
-  ShiftStackPointer(-4);
+  // ShiftStackPointer(-4);
   *offset = *offset + 4;
   var_desp->in_stack = true, var_desp->offset = -(*offset);
 }
@@ -298,6 +300,7 @@ void PushAllParamOnStack(InterCodes IC, int* offset) {
     AddACCode(MakeACNode(A_LW, op_param, op_addr));
     param_ic = param_ic->next;
   }
+  SpillAll();
 }
 
 void PushAllLocalVarOnStack(InterCodes IC, int* offset) {
@@ -307,7 +310,7 @@ void PushAllLocalVarOnStack(InterCodes IC, int* offset) {
     var_detector = var_detector->next;
     data = var_detector->data;
     if (data->kind == I_FUNC) break;
-    swtich(data->kind) {
+    switch (data->kind) {
       case I_LABEL:
       case I_FUNC:
       case I_JMP: {
@@ -315,7 +318,7 @@ void PushAllLocalVarOnStack(InterCodes IC, int* offset) {
       case I_DEC: {
         int dec_size = data->u.dec.size;
         *offset = *offset + (dec_size - 4);
-        ShiftStackPointer(4 - dec_size);
+        // ShiftStackPointer(4 - dec_size);
         PushVarOnStack(data->u.dec.x, offset);
       } break; /* DEC x [size] */
       case I_CALL: {
@@ -333,7 +336,7 @@ void PushAllLocalVarOnStack(InterCodes IC, int* offset) {
       case I_DEREF_R:
       case I_DEREF_L: {
         PushVarOnStack(data->u.unary.x, offset);
-        PushVarOnStack(data->u.unary.y);
+        PushVarOnStack(data->u.unary.y, offset);
       } break; /* []x = []y */
       case I_JMP_IF: {
         PushVarOnStack(data->u.jmp_if.x, offset);
@@ -353,13 +356,14 @@ void PushAllLocalVarOnStack(InterCodes IC, int* offset) {
   }
 }
 
-InterCodes GetFuncArgs(InterCodes IC, int* args_cnt) {
+int GetFuncArgs(InterCodes IC) {
+  int args_cnt = 0;
   InterCodes args_ic = IC->prev;
   while (args_ic && args_ic->data->kind == I_ARG) {
-    *args_cnt = *args_cnt + 1;
+    args_cnt++;
     args_ic = args_ic->prev;
   }
-  return args_ic;
+  return args_cnt;
 }
 
 void ShiftStackPointer(int offset) {
@@ -412,19 +416,15 @@ int Ensure(Operand ope, InterCodes pre, bool isload) {
   int ret = -1;
   VarDesp ope_desp = LookupVarDesp(ope);
   assert(ope_desp != NULL);
-  if (ope_desp->in_reg) {
-    ret = ope_desp->reg_no;
-  } else {
-    ret = Allocate(pre);
-    ope_desp->in_reg = true, ope_desp->reg_no = ret;
-    if (isload) {
-      // emit MIPS32 code [lw result, x]
-      assert(ope_desp->in_stack);
-      AsmOpe op_des = GetRegAsmOpe(ret);
-      AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_fp), ope_desp->offset);
-      AsmCodes lw_code = MakeACNode(A_LW, op_des, op_addr);
-      AddACCode(lw_code);
-    }
+  ret = Allocate(pre);
+  ope_desp->in_reg = true, ope_desp->reg_no = ret;
+  if (isload) {
+    // emit MIPS32 code [lw result, x]
+    assert(ope_desp->in_stack);
+    AsmOpe op_des = GetRegAsmOpe(ret);
+    AsmOpe op_addr = NewAddrAsmOpe(GetRegAsmOpe(_fp), ope_desp->offset);
+    AsmCodes lw_code = MakeACNode(A_LW, op_des, op_addr);
+    AddACCode(lw_code);
   }
   return ret;
 }
@@ -459,10 +459,10 @@ int GetReg(Operand ope, InterCodes pre, bool isload) {
 }
 
 void FreeReg(int reg_no) {
-  VarDesp ope_desp = LookupVarDesp(Reg[reg_no].var);
-  assert(ope_desp->in_reg);
-  ope_desp->in_reg = false;
-  ope_desp->reg_no = -1;
+  // VarDesp ope_desp = LookupVarDesp(Reg[reg_no].var);
+  // assert(ope_desp->in_reg);
+  // ope_desp->in_reg = false;
+  // ope_desp->reg_no = -1;
   Reg[reg_no].var = NULL;
   Reg[reg_no].next_ref = -1;
 }

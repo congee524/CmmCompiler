@@ -281,7 +281,7 @@ char* OpeName(Operand ope) {
       sprintf(s, "label%d", ope->u.var_no);
     } break;
     case OP_FUNC: {
-      sprintf(s, "func@%s", ope->u.id);
+      sprintf(s, "func_%s", ope->u.id);
     } break;
     default:
       assert(0);

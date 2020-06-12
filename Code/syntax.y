@@ -65,8 +65,8 @@ Program:
             Asm();
             AsmGen(ACHead);
             /* debug */
-            fout = fopen("out.ir", "w");
-            IRGen(ICHead);
+            // fout = fopen("out.ir", "w");
+            // IRGen(ICHead);
         }
     }
 ;

@@ -250,7 +250,7 @@ struct AsmOpe_ {
     struct {
       AsmOpe addr;
       int off;
-    }
+    };
   } u;
 };
 
@@ -305,7 +305,7 @@ extern Type TypeInt, TypeFloat;
 extern AsmCodes ACHead;
 extern int *BasicBlock;
 extern int BlockSize, BlockCnt;
-extern VarDesp vardesptable[0x3fff + 1];
+extern VarDesp vardesptable[0x3fff];
 
 /*============= helper =============*/
 
@@ -343,7 +343,7 @@ void PushAllParamOnStack(InterCodes IC, int *offset);
 
 void PushAllLocalVarOnStack(InterCodes IC, int *offset);
 
-InterCodes GetFuncArgs(InterCodes IC, int *args_cnt);
+int GetFuncArgs(InterCodes IC);
 
 void ShiftStackPointer(int offset);
 
@@ -375,7 +375,7 @@ void AsmGen(AsmCodes root);
 
 void AsmHeadGen();
 
-void AsmFromLabel(InterCode data);
+void AsmFromLabel(InterCodes IC);
 
 void AsmFromAssign(InterCodes IC);
 
